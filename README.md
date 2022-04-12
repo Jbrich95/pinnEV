@@ -13,5 +13,22 @@ Methodology for fitting marginal extreme value (and associated) models using par
 library(devtools)
 install_github("https://github.com/Jbrich95/EVpinn")
 
+#Do not use library(reticulate) as this auto-initialises a Python environment. Instead call functions directly
+
+library(keras)
+library(tfprobability)
+#Create a virtual envionment 'myenv' with Python3.7. Install tensorflow and tfprobability within this environment.
+reticulate::virtualenv_create(envname = 'myenv',  python= 'python3.7')
+reticulate::use_virtualenv("myenv", required = T)
+reticulate::virtualenv_install("myenv",packages = "tensorflow")
+install_keras(method = c("virtualenv"), envname = "myenv", tensorflow = "cpu") #Change 'cpu' to 'gpu' for GPU-friendly install
+
+library(keras)
+library(tfprobability)
+reticulate::use_virtualenv("myenv", required = T)
+reticulate::virtualenv_install("myenv",packages = "tensorflow_probability")
+install_tfprobability(method = c("virtualenv"), envname = "myenv", tensorflow = "cpu")
+
 ```
+Note that if you are using Rstudio, you may need to change the Python interpreter to the newly created 'myenv'. This can be done (in Rstudio 2021.09.0+351) by navigating to Tools->Global Options->Python->Python interpreter->Select->Virtual Environments and then selecting the path to 'myenv'.
 
