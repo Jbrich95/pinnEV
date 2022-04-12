@@ -6,6 +6,7 @@ Methodology for fitting marginal extreme value (and associated) models using par
 * Blended Genarlised Extreme Value (bGEV) distribution - see Castro-Camilo, D., et al. (2021) [10.48550/ARXIV.2106.13110](https://doi.org/10.48550/arXiv.2106.13110)
 * bGEV point process - see Richards, J. and Huser, R. (2022)
 * Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143)
+* Bernoulli/logistic
 ## Installation
 
 ```r
