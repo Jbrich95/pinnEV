@@ -2,37 +2,56 @@
 % Please edit documentation in R/fit_bernoulli_NN.R
 \name{fit_bernoulli_nn}
 \alias{fit_bernoulli_nn}
-\title{Train a partially-interpretable neural network to fit a logistic regression model}
+\title{Train partially-interpretable neural network to fit a logistic regression model}
 \usage{
 fit_bernoulli_nn(
   Y_train,
-  X_train_nn,
-  X_train_lin,
-  X_train_add_basis,
   Y_test = NULL,
-  type = c("MLP", "CNN"),
-  n.epoch = 1000
+  X_train_nn = NULL,
+  X_train_lin = NULL,
+  X_train_add_basis = NULL,
+  type = "MLP",
+  n.ep = 1000,
+  init.p = 0.5,
+  widths = c(6, 3),
+  filter = c(3, 3)
 )
 }
 \arguments{
-\item{Y_train, Y_test}{A 2 or 3 dimensional array of training or test response values.
+\item{Y_train, Y_test}{A 2 or 3 dimensional array of training or test response values, with entries of 0/1 for failure/success.
+Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
 The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.epoch} epochs.}
+If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X_train_nn}{A 3 or 4 dimensional array of "non-additive" predictor values. The first three dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a} 'non-additive' predictor values.}
+\item{X_train_nn}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if thise is the case, then \code{type} has no efect.
+The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a} 'non-additive' predictor values.}
 
-\item{X_train_lin}{A 3 or 4 dimensional array of "linear" predictor values. The first three dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l} 'linear' predictor values.}
+\item{X_train_lin}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
+The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l} 'linear' predictor values.}
 
-\item{X_train_add_basis}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.}
+\item{X_train_add_basis}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions is equal to the number of knots used for estimating the splines and last dimension corresponds to the chosen \eqn{a} 'linear' predictor values.
+If \code{NULL}, a model without the additive component is built and trained.}
 
 \item{type}{A string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers.}
+
+\item{n.ep}{Number of epochs used for training.}
+
+\item{init.p}{Initial probability estimate. Applied across all predictor values.}
+
+\item{widths}{Vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}.}
+
+\item{filter}{If \code{type=="CNN"}, this vector gives the size of the convolution layer. Same filter applied at each layer.}
 }
 \value{
 Returns the fitted model which minimises some loss over the specified number of epochs; if \code{!is.null(Y_test)}, minimises the validation loss and minmises the training loss, otherwise.
 }
 \description{
-Model is fitted by minimisation of binary cross-entropy loss over \code{n.epoch} epochs.
+Train partially-interpretable neural network to fit a logistic regression model
+}
+\details{
+Model is fitted by minimisation of binary cross-entropy loss over \code{n.ep} epochs using a logsitic link function to ensure that estimated probability is in \eqn{(0,1)}.
 }
 \examples{
 
