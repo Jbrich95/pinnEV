@@ -1,4 +1,4 @@
-#' Build and train a partially-interpretable neural network to fit a logistic regression model
+#' Build and train a partially-interpretable neural network logistic regression model
 #'
 
 #' @param type A string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
@@ -6,15 +6,18 @@
 #' Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
 #' The first dimension should be the observation indices, e.g., time.
 #' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-#' If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
+#' If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs. Note that
 #'
-#' @param X_train_nn A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
-#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a} 'non-additive' predictor values.
-#' @param X_train_lin A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
-#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l} 'linear' predictor values.
-#' @param X_train_add_basis A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+#' @param X_train A list of predictors used for modelling. Must contain at least one of the following three named entries:\describe{
+#' \item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
+#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a} 'non-additive' predictor values.}
+#' \item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
+#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l} 'linear' predictor values.}
+#' \item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
-#' If \code{NULL}, a model without the additive component is built and trained.
+#' If \code{NULL}, a model without the additive component is built and trained.}
+#' }
+#' Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_test}.
 #' @param n.ep Number of epochs used for training. Defaults to 1000.
 #' @param batch.size Batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
 #' @param init.p Sets the initial probability estimate across all dimensions of \code{Y_train}.
@@ -27,7 +30,7 @@
 #' Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
 #'
-
+#' The function \code{predict_bernoulli_nn} is a wrapper for \code{keras::predict} that takes input \code{X_train} and the fitted \code{model}, which is ouput by \code{fit_bernoulli_nn}.
 
 #' @return Returns the fitted model
 #'
@@ -62,24 +65,42 @@
 #'dim(Y_train)=c(10,10,2) #Re-shape to a 4-d array. First dimension corresponds to observations
 #'dim(Y_test)=c(10,10,2)
 #'
+#'X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,"X_train_add_bass"=X_train_add_basis)
+#'
 #' #Build and train a two-layered "lin+GAM+NN" MLP
-#'model<-fit_bernoulli_nn(Y_train, Y_test ,X_train_nn,X_train_lin,X_train_add_basis, type="MLP",n.ep=100, batch.size=50,init.p=0.5, widths=c(6,3))
+#'model<-fit_bernoulli_nn(Y_train, Y_test,X_train,  type="MLP",n.ep=100, batch.size=50,init.p=0.5, widths=c(6,3))
 #'
-#'
+#'predictions<-predict_bernoulli_nn(X_train,model)
 
 
 #'
 #' @rdname fit_bern_NN
 #' @export
 
-fit_bernoulli_nn=function(Y_train, Y_test = NULL,X_train_nn,X_train_lin,X_train_add_basis, type="MLP",
+fit_bernoulli_nn=function(Y_train, Y_test = NULL,X_train, type="MLP",
                           n.ep=100, batch.size=100,init.p=0.5, widths=c(6,3), filter.dim=c(3,3),seed=NULL)
 {
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) ) stop("No predictors provided")
-  if(is.null(Y_train)) stop("No training response data provided")
-  if(type=="CNN") print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
-  if(type=="MLP") print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
+
+
+
+  if(is.null(X_train)  ) stop("No predictors provided")
+  if(is.null(Y_train)) stop("No training response data provided")
+
+  X_train_nn=X_train$X_train_nn
+  X_train_lin=X_train$X_train_lin
+  X_train_add_basis=X_train$X_train_add_basis
+
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {  test.data= list(X_train_lin,X_train_add_basis,X_train_nn); print("Defining lin+GAM+NN model for p" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin,add_input_p=X_train_add_basis,  nn_input_p=X_train_nn),Y_test)}
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {   test.data= list(X_train_lin,X_train_add_basis); print("Defining lin+GAM model for p" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin,add_input_p=X_train_add_basis),Y_test)}
+  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) { test.data= list(X_train_lin,X_train_nn); print("Defining lin+NN model for p" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin, nn_input_p=X_train_nn),Y_test)}
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) ) {test.data= list(X_train_add_basis,X_train_nn); print("Defining GAM+NN model for p" );  if(!is.null(Y_test)) validation.data=list(list(add_input_p=X_train_add_basis,  nn_input_p=X_train_nn),Y_test)}
+  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )   {test.data= list(X_train_lin); print("Defining fully-linear model for p" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin),Y_test)}
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )   {test.data= list(X_train_add_basis); print("Defining fully-additive model for p" );  if(!is.null(Y_test)) validation.data=list(list(add_input_p=X_train_add_basis),Y_test)}
+  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )   {test.data= list(X_train_nn); print("Defining fully-NN model for p" );  if(!is.null(Y_test)) validation.data=list(list( nn_input_p=X_train_nn),Y_test)}
+
+  if(type=="CNN" & !is.null(X_train_nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="MLP"  & !is.null(X_train_nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
   reticulate::use_virtualenv("myenv", required = T)
 
@@ -95,22 +116,15 @@ fit_bernoulli_nn=function(Y_train, Y_test = NULL,X_train_nn,X_train_lin,X_train_
 
   if(!is.null(Y_test)) checkpoint <- callback_model_checkpoint(paste0("model_bernoulli_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bernoulli_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {  test.data= list(X_train_lin,X_train_add_basis,X_train_nn);  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin,add_input_p=X_train_add_basis,  nn_input_p=X_train_nn),Y_test)}
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {   test.data= list(X_train_lin,X_train_add_basis);  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin,add_input_p=X_train_add_basis),Y_test)}
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) { test.data= list(X_train_lin,X_train_nn);  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin, nn_input_p=X_train_nn),Y_test)}
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) ) {test.data= list(X_train_add_basis,X_train_nn);  if(!is.null(Y_test)) validation.data=list(list(add_input_p=X_train_add_basis,  nn_input_p=X_train_nn),Y_test)}
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )   {test.data= list(X_train_lin);  if(!is.null(Y_test)) validation.data=list(list(lin_input_p=X_train_lin),Y_test)}
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )   {test.data= list(X_train_add_basis);  if(!is.null(Y_test)) validation.data=list(list(add_input_p=X_train_add_basis),Y_test)}
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )   {test.data= list(X_train_nn);  if(!is.null(Y_test)) validation.data=list(list( nn_input_p=X_train_nn),Y_test)}
 
   if(!is.null(Y_test)){
-  history <- model %>% fit(
-    test.data, Y_train,
-    epochs = n.ep, batch_size = batch.size,
-    callback=list(checkpoint),
-    validation_data=validation.data
+    history <- model %>% fit(
+      test.data, Y_train,
+      epochs = n.ep, batch_size = batch.size,
+      callback=list(checkpoint),
+      validation_data=validation.data
 
-  )
+    )
   }else{
 
     history <- model %>% fit(
@@ -122,7 +136,33 @@ fit_bernoulli_nn=function(Y_train, Y_test = NULL,X_train_nn,X_train_lin,X_train_
 
   return(model)
 }
+#' @rdname fit_bern_NN
+#' @export
+#'
+predict_bernoulli_nn=function(X_train, model)
+{
 
+
+
+  if(is.null(X_train)  ) stop("No predictors provided")
+
+  X_train_nn=X_train$X_train_nn
+  X_train_lin=X_train$X_train_lin
+  X_train_add_basis=X_train$X_train_add_basis
+
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) predictions<-model %>% predict(  list(X_train_lin,X_train_add_basis,X_train_nn))
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )    predictions<-model %>% predict( list(X_train_lin,X_train_add_basis))
+  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) predictions<-model %>% predict( list(X_train_lin,X_train_nn))
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) ) predictions<-model %>% predict( list(X_train_add_basis,X_train_nn))
+  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  predictions<-model %>% predict(list(X_train_lin))
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )   predictions<-model %>% predict( list(X_train_add_basis))
+  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )   predictions<-model %>% predict( list(X_train_nn))
+
+
+  return(predictions)
+}
+#'
+#'
 build_bernoulli_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p=0.5, widths=c(6,3),filter.dim=c(3,3))
 {
   #Additive input
@@ -145,14 +185,14 @@ build_bernoulli_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init
 
     nnBranchp <- input_nn
     if(type=="MLP"){
-    for(i in 1:n.layers){
-      nnBranchp <- nnBranchp  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                              input_shape =dim(X_train_nn)[-1], name = paste0('nn_p_dense',i) )
-    }
+      for(i in 1:n.layers){
+        nnBranchp <- nnBranchp  %>% layer_dense(units=nunits[i],activation = 'relu',
+                                                input_shape =dim(X_train_nn)[-1], name = paste0('nn_p_dense',i) )
+      }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchp <- nnBranchp  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                input_shape =dim(X_train_nn)[-1], name = paste0('nn_p_cnn',i) )
+                                                  input_shape =dim(X_train_nn)[-1], name = paste0('nn_p_cnn',i) )
       }
 
     }
@@ -242,4 +282,3 @@ bce_loss <- function( y_true, y_pred) {
 
   return(loss)
 }
-

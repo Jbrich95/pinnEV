@@ -1,6 +1,6 @@
-Package: EVpinn
+Package: pinnEV
 Type: Package
-Title: Extreme Value modelling using Partially-Interpretable Neural Networks
+Title: Partially-Interpretable Neural Networks for Extreme Value modelling
 Version: 0.1.0
 Author: Jordan Richards
 Maintainer: The package maintainer <jordan.richards@kaust.edu.sa>

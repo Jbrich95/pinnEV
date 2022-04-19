@@ -2,14 +2,13 @@
 % Please edit documentation in R/fit_bernoulli_NN.R
 \name{fit_bernoulli_nn}
 \alias{fit_bernoulli_nn}
-\title{Build and train a partially-interpretable neural network to fit a logistic regression model}
+\alias{predict_bernoulli_nn}
+\title{Build and train a partially-interpretable neural network logistic regression model}
 \usage{
 fit_bernoulli_nn(
   Y_train,
   Y_test = NULL,
-  X_train_nn,
-  X_train_lin,
-  X_train_add_basis,
+  X_train,
   type = "MLP",
   n.ep = 100,
   batch.size = 100,
@@ -18,23 +17,26 @@ fit_bernoulli_nn(
   filter.dim = c(3, 3),
   seed = NULL
 )
+
+predict_bernoulli_nn(X_train, model)
 }
 \arguments{
 \item{Y_train, Y_test}{A 2 or 3 dimensional array of training or test response values, with entries of 0/1 for failure/success.
 Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
 The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
+If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs. Note that}
 
-\item{X_train_nn}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
+\item{X_train}{A list of predictors used for modelling. Must contain at least one of the following three named entries:\describe{
+\item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a} 'non-additive' predictor values.}
-
-\item{X_train_lin}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
+\item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l} 'linear' predictor values.}
-
-\item{X_train_add_basis}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+\item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 If \code{NULL}, a model without the additive component is built and trained.}
+}
+Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_test}.}
 
 \item{type}{A string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
 
@@ -54,12 +56,14 @@ If \code{NULL}, a model without the additive component is built and trained.}
 Returns the fitted model
 }
 \description{
-Build and train a partially-interpretable neural network to fit a logistic regression model
+Build and train a partially-interpretable neural network logistic regression model
 }
 \details{
 Model is fitted by minimising the binary cross-entropy loss over \code{n.ep} epochs, with a logistic link function used to ensure that the estimated probabilities are in \eqn{(0,1)}.
 Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
+
+The function \code{predict_bernoulli_nn} is a wrapper for \code{keras::predict} that takes input \code{X_train} and the fitted \code{model}, which is ouput by \code{fit_bernoulli_nn}.
 }
 \examples{
 
@@ -91,9 +95,11 @@ Y_train<-Y_test<-rnorm(200) #Create response data; training and test, respective
 dim(Y_train)=c(10,10,2) #Re-shape to a 4-d array. First dimension corresponds to observations
 dim(Y_test)=c(10,10,2)
 
+X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,"X_train_add_bass"=X_train_add_basis)
+
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-fit_bernoulli_nn(Y_train, Y_test ,X_train_nn,X_train_lin,X_train_add_basis, type="MLP",n.ep=100, batch.size=50,init.p=0.5, widths=c(6,3))
+model<-fit_bernoulli_nn(Y_train, Y_test,X_train,  type="MLP",n.ep=100, batch.size=50,init.p=0.5, widths=c(6,3))
 
-
+predictions<-predict_bernoulli_nn(X_train,model)
 
 }
