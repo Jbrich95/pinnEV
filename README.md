@@ -27,7 +27,7 @@ library(keras)
 library(tfprobability)
 reticulate::use_virtualenv("myenv", required = T)
 reticulate::virtualenv_install("myenv",packages = "tensorflow_probability")
-install_tfprobability(method = c("virtualenv"), envname = "myenv")
+install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14.0")
 
 ```
 Note that if you are using Rstudio, you may need to change the Python interpreter to the newly created 'myenv'. This can be done (in Rstudio 2021.09.0+351) by navigating to Tools->Global Options->Python->Python interpreter->Select->Virtual Environments and then selecting the path to 'myenv'.
