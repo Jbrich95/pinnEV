@@ -22,15 +22,15 @@
 #' @param n.ep Number of epochs used for training. Defaults to 1000.
 #' @param batch.size Batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
 #' @param init.p Sets the initial probability estimate across all dimensions of \code{Y_train}.
-#' @param widths Vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to 0.5.
-#' @param filter.dim If \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel. The same filter is applied for each hidden layer.
+#' @param widths Vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
+#' @param filter.dim If \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
 #' @param seed Seed for random initial weights and biases.
 #' @param model Fitted \code{keras} model. Output from \code{train_Bern_NN}.
 
 #' @details{
 #' Consider a Bernoulli random variable, say \eqn{Z\sim\mbox{Bernoulli}(p)}, with probability mass function \eqn{\Pr(Z=1)=p=1-\Pr(Z=0)=1-p}. Let \eqn{Y\in\{0,1\}} be a univariate Boolean response and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-#'  We model \eqn{Y|\mathbf{X}=\mathbf{X}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
+#'  We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
 #' \deqn{p(\mathbf{x})=h[\eta_0+m_L\{\mathbf{x}_L\}+m_A\{x_A\}+m_N\{\mathbf{x}_N\}],} where \eqn{h} is the logistic link-function and \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are both returned as outputs; \eqn{m_N} is estimated using a neural network.
 #'
 #' The model is fitted by minimising the binary cross-entropy loss over \code{n.ep} training epochs.
@@ -52,9 +52,9 @@
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
 #' #last to the different components of the predictor set
-#' dim(X_train_nn)=c(10,10,10,5)
-#' dim(X_train_lin)=c(10,10,10,3)
-#' dim(X_train_add)=c(10,10,10,2)
+#' dim(X_train_nn)=c(10,10,10,5) #Five nn predictors
+#' dim(X_train_lin)=c(10,10,10,3) #Three linear predictors
+#' dim(X_train_add)=c(10,10,10,2) #Two additive predictors
 #'
 #' # Create toy response data
 #'
@@ -105,15 +105,33 @@
 #' #Evaluate rad at all entries to X_train_add and for all knots
 #' }}
 #'
-#' X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,"X_train_add_basis"=NULL)
+#' X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,
+#' "X_train_add_basis"=X_train_add_basis)
 #'
 #' #Build and train a two-layered "lin+GAM+NN" MLP
 #' model<-train_Bern_NN(Y_train, Y_test,X_train,  type="MLP",n.ep=2000,
 #'                       batch.size=50,init.p=0.4, widths=c(6,3))
 #'
 #' out<-predict_bernoulli_nn(X_train,model)
+#' hist(out$predictions) #Plot histogram of predicted probability
 #' print(out$lin.coeff)
 #'
+#'n.add.preds=dim(X_train_add)[length(dim(X_train_add))]
+#'par(mfrow=c(1,n.add.preds))
+#'for(i in 1:n.add.preds){
+#'  plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis
+#'
+#'  tmp=matrix(nrow=length(plt.x),ncol=n.knot)
+#'  for(j in 1:n.knot){
+#'    tmp[,j]=rad(plt.x,knots[i,j]) #Evaluate radial basis function of plt.x and all knots
+#'  }
+#'  plt.y=tmp%*%out$gam.weights[i,]
+#'  plot(plt.x,plt.y,type="l",main=paste0("Quantile spline: predictor ",i),xlab="x",ylab="f(x)")
+#'  points(knots[i,],rep(mean(plt.y),n.knot),col="red",pch=2) #Adds red triangles that denote knot locations
+#'}
+#'
+#'#To save model, run model %>% save_model_tf("model_Bernoulli")
+#'#To load model, run model  <- load_model_tf("model_Bernoulli", custom_objects=list("bce_loss"=bce_loss))
 #'
 #' @rdname train_Bern_NN
 #' @export
@@ -174,6 +192,8 @@ train_Bern_NN=function(Y_train, Y_test = NULL,X_train, type="MLP",
       callback=list(checkpoint)
     )
   }
+  print("Loading checkpoint weights")
+  model <- load_model_weights_tf(model,filepath=paste0("model_bernoulli_checkpoint"))
 
   return(model)
 }
@@ -208,10 +228,10 @@ predict_Bern_nn=function(X_train, model)
 }
 #'
 #'
-build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p=0.5, widths=c(6,3),filter.dim=c(3,3))
+build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, widths,filter.dim)
 {
   #Additive input
-  if(!is.null(X_train_add_basis))  input_add_p<- layer_input(shape = dim(X_train_add_basis)[-1], name = 'add_input_p')
+  if(!is.null(X_train_add_basis))  input_add<- layer_input(shape = dim(X_train_add_basis)[-1], name = 'add_input_p')
 
   #NN input
 
@@ -251,14 +271,14 @@ build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p=0.
   n.dim.add=length(dim(X_train_add_basis))
   if(!is.null(X_train_add_basis) & !is.null(X_train_add_basis) ) {
 
-    addBranchp <- input_add_p %>%
+    addBranchp <- input_add %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis)[2:(n.dim.add-2)],prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_p',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]),ncol=1)),use_bias = F)
   }
   if(!is.null(X_train_add_basis) & is.null(X_train_add_basis) ) {
 
-    addBranchp <- input_add_p %>%
+    addBranchp <- input_add %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis)[2:(n.dim.add-2)],prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_p',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]),ncol=1),array(log(init.p/(1-init.p)))),use_bias = T)
@@ -299,12 +319,12 @@ build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p=0.
     layer_activation( activation = 'sigmoid')
 
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) model <- keras_model(  inputs = c(input_lin,input_add_p,input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_lin,input_add_p),   outputs = c(pBranchjoined),name="Bernoulli" )
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(pBranchjoined),name="Bernoulli" )
   if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add_p,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
   if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_lin),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add_p),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add),   outputs = c(pBranchjoined) ,name="Bernoulli")
   if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
 
   print(model)
