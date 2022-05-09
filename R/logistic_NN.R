@@ -1,15 +1,19 @@
+#' Logistic regression PINN
+
+#'
 #' Build and train a partially-interpretable neural network for a logistic regression model
 #'
+#'@name logistic.NN
 
-#' @param type A string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
-#' @param Y_train,Y_test A 2 or 3 dimensional array of training or test response values, with entries of 0/1 for failure/success.
+#' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
+#' @param Y_train,Y_test a 2 or 3 dimensional array of training or test response values, with entries of 0/1 for failure/success.
 #' Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
 #' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 #' If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#' @param X_train A list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
+#' @param X_train  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
 #' \item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
 #' \item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
@@ -19,26 +23,31 @@
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 #' }
 #' Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_test}.
-#' @param n.ep Number of epochs used for training. Defaults to 1000.
-#' @param batch.size Batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.p Sets the initial probability estimate across all dimensions of \code{Y_train}.
-#' @param widths Vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim If \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
-#' @param seed Seed for random initial weights and biases.
-#' @param model Fitted \code{keras} model. Output from \code{train_Bern_NN}.
+#' @param n.ep number of epochs used for training. Defaults to 1000.
+#' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
+#' @param init.p sets the initial probability estimate across all dimensions of \code{Y_train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.
+#' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
+#' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
+#' final layer has zero initial weights to ensure that the initial probability estimate is \code{init.p} across all dimensions.
+#' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
+#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
+#' @param seed seed for random initial weights and biases.
+#' @param model fitted \code{keras} model. Output from \code{logistic.NN.train}.
 
 #' @details{
 #' Consider a Bernoulli random variable, say \eqn{Z\sim\mbox{Bernoulli}(p)}, with probability mass function \eqn{\Pr(Z=1)=p=1-\Pr(Z=0)=1-p}. Let \eqn{Y\in\{0,1\}} be a univariate Boolean response and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 #'  We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
-#' \deqn{p(\mathbf{x})=h[\eta_0+m_L\{\mathbf{x}_L\}+m_A\{x_A\}+m_N\{\mathbf{x}_N\}],} where \eqn{h} is the logistic link-function and \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are both returned as outputs; \eqn{m_N} is estimated using a neural network.
+#' \deqn{p(\mathbf{x})=h[\eta_0+m_L\{\mathbf{x}_L\}+m_A\{x_A\}+m_N\{\mathbf{x}_N\}],} where \eqn{h} is the logistic link-function and
+#' \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively,
+#' and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is estimated using a neural network.
 #'
 #' The model is fitted by minimising the binary cross-entropy loss over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
 #'
 #'}
-#' @return \code{train_Bern_NN} returns the fitted \code{model}.  \code{predict_Bern_nn} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
+#' @return \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
 #'
 #'
 #' @examples
@@ -62,11 +71,12 @@
 #' m_L = 0.3*X_train_lin[,,,1]+0.6*X_train_lin[,,,2]-0.2*X_train_lin[,,,3]
 #'
 #' # Additive contribution
-#' m_A = 0.1*X_train_add[,,,1]^2+0.2*X_train_add[,,,1]-0.1*X_train_add[,,,2]^3+0.5*X_train_add[,,,2]^2
+#' m_A = 0.1*X_train_add[,,,1]^2+0.2*X_train_add[,,,1]-0.1*X_train_add[,,,2]^3+
+#' 0.5*X_train_add[,,,2]^2
 #'
 #' #Non-additive contribution - to be estimated by NN
-#' m_N = exp(-3+X_train_nn[,,,2]+X_train_nn[,,,3])
-#' +sin(X_train_nn[,,,1]-X_train_nn[,,,2])*(X_train_nn[,,,1]+X_train_nn[,,,2])
+#' m_N = exp(-3+X_train_nn[,,,2]+X_train_nn[,,,3])+
+#' sin(X_train_nn[,,,1]-X_train_nn[,,,2])*(X_train_nn[,,,4]+X_train_nn[,,,5])
 #'
 #' p=0.5+0.5*tanh((m_L+m_A+m_N)/2) #Logistic link
 #' Y=apply(p,1:3,function(x) rbinom(1,1,x))
@@ -96,7 +106,8 @@
 #' knots=matrix(nrow=dim(X_train_add)[4],ncol=n.knot)
 #'
 #' #We set knots to be equally-spaced marginal quantiles
-#' for( i in 1:dim(X_train_add)[4]) knots[i,]=quantile(X_train_add[,,,i],probs=seq(0,1,length=n.knot))
+#' for( i in 1:dim(X_train_add)[4]) {
+#' knots[i,]=quantile(X_train_add[,,,i],probs=seq(0,1,length=n.knot))}
 #'
 #' X_train_add_basis<-array(dim=c(dim(X_train_add),n.knot))
 #' for( i in 1:dim(X_train_add)[4]) {
@@ -109,7 +120,7 @@
 #' "X_train_add_basis"=X_train_add_basis)
 #'
 #' #Build and train a two-layered "lin+GAM+NN" MLP
-#' model<-train_Bern_NN(Y_train, Y_test,X_train,  type="MLP",n.ep=2000,
+#' model<-logistic.NN.train(Y_train, Y_test,X_train,  type="MLP",n.ep=2000,
 #'                       batch.size=50,init.p=0.4, widths=c(6,3))
 #'
 #' out<-predict_bernoulli_nn(X_train,model)
@@ -127,17 +138,20 @@
 #'  }
 #'  plt.y=tmp%*%out$gam.weights[i,]
 #'  plot(plt.x,plt.y,type="l",main=paste0("Quantile spline: predictor ",i),xlab="x",ylab="f(x)")
-#'  points(knots[i,],rep(mean(plt.y),n.knot),col="red",pch=2) #Adds red triangles that denote knot locations
+#'  points(knots[i,],rep(mean(plt.y),n.knot),col="red",pch=2)
+#'  #Adds red triangles that denote knot locations
 #'}
 #'
 #'#To save model, run model %>% save_model_tf("model_Bernoulli")
-#'#To load model, run model  <- load_model_tf("model_Bernoulli", custom_objects=list("bce_loss"=bce_loss))
+#'#To load model, run model  <- load_model_tf("model_Bernoulli",
+#'#custom_objects=list("bce_loss"=bce_loss))
 #'
-#' @rdname train_Bern_NN
+#' @rdname logistic.NN
 #' @export
 
-train_Bern_NN=function(Y_train, Y_test = NULL,X_train, type="MLP",
-                          n.ep=100, batch.size=100,init.p=0.5, widths=c(6,3), filter.dim=c(3,3),seed=NULL)
+logistic.NN.train=function(Y_train, Y_test = NULL,X_train, type="MLP",
+                          n.ep=100, batch.size=100,init.p=NULL, widths=c(6,3), filter.dim=c(3,3),
+                       seed=NULL, init.wb_path=NULL)
 {
 
 
@@ -164,9 +178,11 @@ train_Bern_NN=function(Y_train, Y_test = NULL,X_train, type="MLP",
   reticulate::use_virtualenv("myenv", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
+  if(is.null(init.p)) init.p=mean(Y_train[Y_train>=0]==1)
 
-  model<-build_Bern_nn(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, widths,filter.dim)
 
+  model<-logistic.NN.build(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, widths,filter.dim)
+  if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   model %>% compile(
     optimizer="adam",
     loss = bce_loss,
@@ -197,10 +213,10 @@ train_Bern_NN=function(Y_train, Y_test = NULL,X_train, type="MLP",
 
   return(model)
 }
-#' @rdname train_Bern_NN
+#' @rdname logistic.NN
 #' @export
 #'
-predict_Bern_nn=function(X_train, model)
+logistic.NN.predict=function(X_train, model)
 {
 
 
@@ -224,11 +240,13 @@ predict_Bern_nn=function(X_train, model)
   if(!is.null(X_train_add_basis) & !is.null(X_train_lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]]),"gam.weights"=gam.weights))
   if(is.null(X_train_add_basis) & !is.null(X_train_lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]])))
   if(!is.null(X_train_add_basis) & is.null(X_train_lin)) return(list("predictions"=predictions,"gam.weights"=gam.weights))
+  if(is.null(X_train_add_basis) & is.null(X_train_lin)) return(list("predictions"=predictions))
+
 
 }
 #'
 #'
-build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, widths,filter.dim)
+logistic.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, widths,filter.dim)
 {
   #Additive input
   if(!is.null(X_train_add_basis))  input_add<- layer_input(shape = dim(X_train_add_basis)[-1], name = 'add_input_p')
@@ -314,7 +332,7 @@ build_Bern_nn=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.p, w
   if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )  pBranchjoined <- nnBranchp  #Just NN tower
 
 
-  #Use exponential activation so sig > 0
+  #Apply link functions
   pBranchjoined <- pBranchjoined %>%
     layer_activation( activation = 'sigmoid')
 

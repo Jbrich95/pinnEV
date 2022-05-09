@@ -8,6 +8,6 @@ Description: Methodology for fitting marginal extreme value (and associated) mod
 License: use_mit_license()
 Encoding: UTF-8
 Depends: R (>= 3.4)
-Imports: reticulate, keras,tfprobability,evd,ismev
-Roxygen: list(markdown = TRUE)
+Imports: reticulate, keras, tfprobability, stats
+Roxygen: list(markdown = TRUE, old_usage = TRUE)
 RoxygenNote: 7.1.2
