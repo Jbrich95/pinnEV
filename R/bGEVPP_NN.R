@@ -5,14 +5,14 @@
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
 #'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
-#' @param Y_train,Y_test a 2 or 3 dimensional array of training or test real response values.
-#' Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
+#' @param Y_train,Y_valid a 2 or 3 dimensional array of training or validation real response values.
+#' Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_valid} to \code{-1e5}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
-#' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-#' If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
+#' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+#' If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#'@param u_train an array with the same dimension as \code{Y_train}. Gives the quantile above which the bGEV-PP model is fitted, see below. Note that \code{u_train} is applies to both \code{Y_train} and \code{Y_test}.
+#'@param u_train an array with the same dimension as \code{Y_train}. Gives the quantile above which the bGEV-PP model is fitted, see below. Note that \code{u_train} is applies to both \code{Y_train} and \code{Y_valid}.
 #' @param X_train_q  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{q_\alpha}. Must contain at least one of the following three named entries:\describe{
 #' \item{\code{X_train_lin_q}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn_1}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
@@ -22,7 +22,7 @@
 #' \item{\code{X_train_nn_q}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X_train_q} and \code{X_train_s} are the predictors for both \code{Y_train} and \code{Y_test}.
+#' Note that \code{X_train_q} and \code{X_train_s} are the predictors for both \code{Y_train} and \code{Y_valid}.
 #' @param X_train_S similarly to \code{X_train_s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that both \eqn{q_\beta} and \eqn{s_\beta} must be modelled as non-stationary in this version.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param alpha,beta,p_a,p_b hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
@@ -57,7 +57,7 @@
 #'
 #' The model is fitted by minimising the negative log-likelihood associated with the bGEV-PP model over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
-#' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
+#' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
 #'
 #'}
 #' @return \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
@@ -135,15 +135,15 @@
 #'
 #'
 #'
-#' #Create training and test, respectively.
-#' #We mask 20% of the Y values and use this for validation/testing.
+#' #Create training and validation, respectively.
+#' #We mask 20% of the Y values and use this for validation
 #' #Masked values must be set to -1e5 and are treated as missing whilst training
 #'
 #' mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 #'
-#' Y_train<-Y_test<-Y #Create training and test, respectively.
+#' Y_train<-Y_valid<-Y #Create training and validation, respectively.
 #' Y_train[-mask_inds]=-1e5
-#' Y_test[mask_inds]=-1e5
+#' Y_valid[mask_inds]=-1e5
 #'
 #'
 #'
@@ -197,7 +197,7 @@
 #' u_train <- u
 #'
 #' #Fit the bGEV-PP model using u_train
-#' model<-bGEVPP.NN.train(Y_train, Y_test,X_train_q,X_train_s, u_train, type="MLP",link.loc="identity",
+#' model<-bGEVPP.NN.train(Y_train, Y_valid,X_train_q,X_train_s, u_train, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
 #'                        widths=c(6,3),seed=1, n_b=12)
 #' out<-bGEVPP.NN.predict(X_train_q=X_train_q,X_train_s=X_train_s,u_train=u_train,model)
@@ -253,7 +253,7 @@
 #' @rdname bGEVPP.NN
 #' @export
 
-bGEVPP.NN.train=function(Y_train, Y_test = NULL,X_train_q,X_train_s, u_train = NULL, type="MLP",link.loc="identity",
+bGEVPP.NN.train=function(Y_train, Y_valid = NULL,X_train_q,X_train_s, u_train = NULL, type="MLP",link.loc="identity",
                         n.ep=100, batch.size=100,init.loc=NULL, init.spread=NULL,init.xi=NULL,
                         widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
                         alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,n_b=1)
@@ -278,25 +278,25 @@ bGEVPP.NN.train=function(Y_train, Y_test = NULL,X_train_q,X_train_s, u_train = N
   X_train_add_basis_q=X_train_q$X_train_add_basis_q
 
 
-  if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {  train.data= list(X_train_lin_q,X_train_add_basis_q,X_train_nn_q); print("Defining lin+GAM+NN model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q,  nn_input_q=X_train_nn_q),Y_test)}
-  if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {   train.data= list(X_train_lin_q,X_train_add_basis_q); print("Defining lin+GAM model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q),Y_test)}
-  if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) { train.data= list(X_train_lin_q,X_train_nn_q); print("Defining lin+NN model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_q=X_train_lin_q, nn_input_q=X_train_nn_q),Y_test)}
-  if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) ) {train.data= list(X_train_add_basis_q,X_train_nn_q); print("Defining GAM+NN model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(add_input_q=X_train_add_basis_q,  nn_input_q=X_train_nn_q),Y_test)}
-  if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   {train.data= list(X_train_lin_q); print("Defining fully-linear model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(lin_input_q=X_train_lin_q),Y_test)}
-  if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_add_basis_q); print("Defining fully-additive model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list(add_input_q=X_train_add_basis_q),Y_test)}
-  if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_nn_q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y_test)) validation.data=list(list( nn_input_q=X_train_nn_q),Y_test)}
+  if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {  train.data= list(X_train_lin_q,X_train_add_basis_q,X_train_nn_q); print("Defining lin+GAM+NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q,  nn_input_q=X_train_nn_q),Y_valid)}
+  if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {   train.data= list(X_train_lin_q,X_train_add_basis_q); print("Defining lin+GAM model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q),Y_valid)}
+  if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) { train.data= list(X_train_lin_q,X_train_nn_q); print("Defining lin+NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q, nn_input_q=X_train_nn_q),Y_valid)}
+  if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) ) {train.data= list(X_train_add_basis_q,X_train_nn_q); print("Defining GAM+NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(add_input_q=X_train_add_basis_q,  nn_input_q=X_train_nn_q),Y_valid)}
+  if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   {train.data= list(X_train_lin_q); print("Defining fully-linear model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q),Y_valid)}
+  if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_add_basis_q); print("Defining fully-additive model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(add_input_q=X_train_add_basis_q),Y_valid)}
+  if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_nn_q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list( nn_input_q=X_train_nn_q),Y_valid)}
 
   X_train_nn_s=X_train_s$X_train_nn_s
   X_train_lin_s=X_train_s$X_train_lin_s
   X_train_add_basis_s=X_train_s$X_train_add_basis_s
 
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {  train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining lin+GAM+NN model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_test)}
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,u_train)); print("Defining lin+GAM model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,u_input=u_train)),Y_test)}
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) { train.data= c(train.data,list(X_train_lin_s,X_train_nn_s,u_train)); print("Defining lin+NN model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s, nn_input_s=X_train_nn_s,u_input=u_train)),Y_test)}
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) {train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining GAM+NN model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_test)}
-  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_lin_s,u_train)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,u_input=u_train)),Y_test)}
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_add_basis_s,u_train)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,u_input=u_train)),Y_test)}
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_nn_s,u_train)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y_test)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X_train_nn_s,u_input=u_train)),Y_test)}
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {  train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining lin+GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,u_train)); print("Defining lin+GAM model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,u_input=u_train)),Y_valid)}
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) { train.data= c(train.data,list(X_train_lin_s,X_train_nn_s,u_train)); print("Defining lin+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s, nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) {train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
+  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_lin_s,u_train)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,u_input=u_train)),Y_valid)}
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_add_basis_s,u_train)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,u_input=u_train)),Y_valid)}
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_nn_s,u_train)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
 
 
   if(type=="CNN" & (!is.null(X_train_nn_q) | !is.null(X_train_nn_s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
@@ -318,10 +318,10 @@ bGEVPP.NN.train=function(Y_train, Y_test = NULL,X_train_q,X_train_s, u_train = N
     run_eagerly=T
   )
 
-  if(!is.null(Y_test)) checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
+  if(!is.null(Y_valid)) checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
 
-  if(!is.null(Y_test)){
+  if(!is.null(Y_valid)){
     history <- model %>% fit(
       train.data, Y_train,
       epochs = n.ep, batch_size = batch.size,
