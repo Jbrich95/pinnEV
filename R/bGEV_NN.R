@@ -1,6 +1,6 @@
-#'blended-GEV point process PINN
+#'blended-GEV PINN
 #'
-#' Build and train a partially-interpretable neural network for fitting a bGEV point-process model
+#' Build and train a partially-interpretable neural network for fitting a bGEV model
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
@@ -12,7 +12,6 @@
 #' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 #' If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#'@param u_train an array with the same dimension as \code{Y_train}. Gives the quantile above which the bGEV-PP model is fitted, see below. Note that \code{u_train} is applies to both \code{Y_train} and \code{Y_valid}.
 #' @param X_train_q  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{q_\alpha}. Must contain at least one of the following three named entries:\describe{
 #' \item{\code{X_train_lin_q}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn_1}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
@@ -25,7 +24,7 @@
 #' Note that \code{X_train_q} and \code{X_train_s} are the predictors for both \code{Y_train} and \code{Y_valid}.
 #' @param X_train_S similarly to \code{X_train_s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that both \eqn{q_\beta} and \eqn{s_\beta} must be modelled as non-stationary in this version.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
-#' @param alpha,beta,p_a,p_b,c1,c2 hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
+#' @param alpha,beta,p_a,p_b hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
 #' @param init.loc,init.spread,init.xi sets the initial \eqn{q_\alpha,s_\beta} and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y_train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
@@ -36,38 +35,33 @@
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param n_b number of observations per block, e.g., if observations correspond to months and the interest is annual maxima, then \code{n_b=12}.
 
-#'@name bGEVPP.NN
+#'@name bGEV.NN
 
 #' @details{
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For \eqn{i=1,2}, we define integers \eqn{l_i\geq 0,a_i \geq 0} and \eqn{0\leq l_i+a_i \leq d}, and let \eqn{\mathbf{X}^{(i)}_L, \mathbf{X}^{(i)}_A} and \eqn{\mathbf{X}^{(i)}_N} be distinct sub-vectors
 #' of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}^{(i)}_L, \mathbf{x}^{(i)}_A} and \eqn{\mathbf{x}^{(i)}_N}, respectively; the lengths of the sub-vectors are \eqn{l_i,a_i} and \eqn{d_i-l_i-a}, respectively.
-#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{bGEV-PP}(q_\alpha(\mathbf{x}),s_\beta(\mathbf{x}),\xi;u(\mathbf{x}))} for \eqn{\xi\in(0,1)} with
+#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{bGEV}(q_\alpha(\mathbf{x}),s_\beta(\mathbf{x}),\xi)} for \eqn{\xi\in(0,1)} with
 #' \deqn{q_\alpha (\mathbf{x})=h_1[\eta^{(1)}_0+m^{(1)}_L\{\mathbf{x}^{(1)}_L\}+m^{(1)}_A\{x^{(1)}_A\}+m^{(1)}_N\{\mathbf{x}^{(1)}_N\}]} and
 #' \deqn{s_\beta (\mathbf{x})=\exp[\eta^{(2)}_0+m^{(2)}_L\{\mathbf{x}^{(2)}_L\}+m^{(2)}_A\{x^{(2)}_A\}+m^{(2)}_N\{\mathbf{x}^{(2)}_N\}]}
 #' where \eqn{h_1} is some link-function and \eqn{\eta^{(1)}_0,\eta^{(2)}_0} are constant intercepts. The unknown functions \eqn{m^{(1)}_L,m^{(2)}_L} and
 #' \eqn{m^{(1)}_A,m^{(2)}_A} are estimated using linear functions and splines, respectively, and are
-#' both returned as outputs by \code{bGEVPP.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} are estimated using neural networks
+#' both returned as outputs by \code{bGEV.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} are estimated using neural networks
 #' (currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 #'
-#'Note that for sufficiently large \eqn{u} that \eqn{Y\sim\mbox{bGEV-PP}(q_\alpha,s_\beta,\xi;u)} implies that \eqn{\max_{i=1,\dots,n_b}\{Y_i\}\sim \mbox{bGEV}(q_\alpha,s_\beta,\xi)},
-#'i.e., the \eqn{n_b}-block maxima of independent realisations of \eqn{Y} follow a bGEV distribution (see \code{help(pbGEV)}). The size of the block can be specified by the parameter \code{n_b}.
+#' For details of the bGEV distribution, see \code{help(pbGEV)}. 
 #'
-#' The model is fitted by minimising the negative log-likelihood associated with the bGEV-PP model over \code{n.ep} training epochs.
+#' The model is fitted by minimising the negative log-likelihood associated with the bGEV model over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
 #'
 #'}
-#' @return \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
+#' @return \code{bGEV.NN.train} returns the fitted \code{model}.  \code{bGEV.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
 #'
 #'@references
 #' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for GEV-based regression models for extremes}, arXiv.
 #' (\href{https://doi.org/10.48550/arXiv.2106.13110}{doi})
-#'
-#'Richards, J. and Huser, R. (2022), \emph{High-dimensional extreme quantile regression using 
-#'partially-interpretable neural networks: With application to U.S. wildfires.}
 #'
 #' @examples
 #'
@@ -117,26 +111,18 @@
 #'   0.1*X_train_add_s[,,,2]^3
 #'
 #' #Non-additive contribution - to be estimated by NN
-#' m_N_2 = exp(-3+X_train_nn_s[,,,2]+X_train_nn_s[,,,3])+
-#'   sin(X_train_nn_s[,,,1]-X_train_nn_s[,,,2])*(X_train_nn_s[,,,1]+X_train_nn_s[,,,2])
+#'m_N_2 = 0.25*exp(-3+X_train_nn_s[,,,2]+X_train_nn_s[,,,3])+
+#' sin(X_train_nn_s[,,,1]-X_train_nn_s[,,,2])*(X_train_nn_s[,,,1]+X_train_nn_s[,,,2])
 #'
-#' s_beta=0.5*exp(-2+m_L_2+m_A_2+m_N_2) #Exponential link
+#' s_beta=0.3*exp(-2+m_L_2+m_A_2+m_N_2) #Exponential link
 #'
 #' xi=0.1 # Set xi
 #'
 #' theta=array(dim=c(dim(s_beta),3))
 #' theta[,,,1]=q_alpha; theta[,,,2] = s_beta; theta[,,,3]=xi
-#' #We simulate data from the extreme value point process model with u take as the 80% quantile
+#' #We simulate data from the bGEV distribution
 #'
-#' u<-apply(theta,1:3,function(x) qPP(prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par = T)) #Gives the 80% quantile of Y
-#'
-#' Y=apply(theta,1:3,function(x) rPP(1,u.prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par=T)) #Simulate from re-parametrised point process model using same u as given above
-#'
-#' # Note that the point process model is only valid for Y > u. If Y < u, then rPP gives NA.
-#' # We can set NA values to some c < u as these do not contribute to model fitting.
-#' Y[is.na(Y)]=u[is.na(Y)]-1
-#'
-#'
+#' Y=apply(theta,1:3,function(x) rbGEV(1,q_alpha=x[1],s_beta=x[2],xi=x[3]))
 #'
 #' #Create training and validation, respectively.
 #' #We mask 20% of the Y values and use this for validation
@@ -195,26 +181,23 @@
 #' X_train_s=list("X_train_nn_s"=X_train_nn_s, "X_train_lin_s"=X_train_lin_s,
 #'                "X_train_add_basis_s"=X_train_add_basis_s) #Predictors for s_\beta
 #'
-#' #We treat u as fixed and known. In an application, u can be estimated using quant.NN.train.
 #'
-#' u_train <- u
-#'
-#' #Fit the bGEV-PP model using u_train
-#' model<-bGEVPP.NN.train(Y_train, Y_valid,X_train_q,X_train_s, u_train, type="MLP",link.loc="identity",
+#' #Fit the bGEV model
+#' model<-bGEV.NN.train(Y_train, Y_valid,X_train_q,X_train_s, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
-#'                        widths=c(6,3),seed=1, n_b=12)
-#' out<-bGEVPP.NN.predict(X_train_q=X_train_q,X_train_s=X_train_s,u_train=u_train,model)
+#'                        widths=c(6,3),seed=1)
+#' out<-bGEV.NN.predict(X_train_q=X_train_q,X_train_s=X_train_s,model)
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 #'
 #' #To save model, run
-#' #model %>% save_model_tf("model_bGEVPP")
+#' #model %>% save_model_tf("model_bGEV")
 #' #To load model, run
-#' # model  <- load_model_tf("model_bGEVPP",
-#' #custom_objects=list("bgev_PP_loss_alpha__beta__p_a__p_b_"=bgev_PP_loss(n_b=12)))
+#' # model  <- load_model_tf("model_bGEV",
+#' #custom_objects=list("bgev_loss_alpha__beta__p_a__p_b__c1__c2_"=bgev_loss))
 #'
-#' #Note that bGEV_PP_loss() can take custom alpha,beta, p_a, p_b, c1 and c2 arguments if defaults not used.
+#' #Note that bGEV_loss() can take custom alpha,beta, p_a and p_b arguments if defaults not used
 #'
 #'
 #' # Plot splines for the additive predictors
@@ -253,34 +236,33 @@
 #'
 #' }
 #'
-#' @rdname bGEVPP.NN
+#' @rdname bGEV.NN
 #' @export
 
-bGEVPP.NN.train=function(Y_train, Y_valid = NULL,X_train_q,X_train_s, u_train = NULL, type="MLP",link.loc="identity",
-                        n.ep=100, batch.size=100,init.loc=NULL, init.spread=NULL,init.xi=NULL,
-                        widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
-                        alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,n_b=1)
+bGEV.NN.train=function(Y_train, Y_valid = NULL,X_train_q,X_train_s, type="MLP",link.loc="identity",
+                         n.ep=100, batch.size=100,init.loc=NULL, init.spread=NULL,init.xi=NULL,
+                         widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
+                         alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5)
 {
-
-
-
-
+  
+  
+  
+  
   if(is.null(X_train_q)  ) stop("No predictors provided for q_\alpha")
   if(is.null(X_train_s)  ) stop("No predictors provided for s_\beta")
   if(is.null(Y_train)) stop("No training response data provided")
-  if(is.null(u_train)) stop("No threshold u_train provided")
 
   if(is.null(init.loc) & is.null(init.wb_path)  ) stop("Inital location estimate not provided")
   if(is.null(init.spread) & is.null(init.wb_path)   ) stop("Inital spread estimate not provided")
   if(is.null(init.xi)  & is.null(init.wb_path) ) stop("Inital shape estimate not provided")
-
-
-  print(paste0("Creating bGEV-PP model with ",n_b,"-block maxima following bGEV"))
+  
+  
+  print(paste0("Creating bGEV model"))
   X_train_nn_q=X_train_q$X_train_nn_q
   X_train_lin_q=X_train_q$X_train_lin_q
   X_train_add_basis_q=X_train_q$X_train_add_basis_q
-
-
+  
+  
   if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {  train.data= list(X_train_lin_q,X_train_add_basis_q,X_train_nn_q); print("Defining lin+GAM+NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q,  nn_input_q=X_train_nn_q),Y_valid)}
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) {   train.data= list(X_train_lin_q,X_train_add_basis_q); print("Defining lin+GAM model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q,add_input_q=X_train_add_basis_q),Y_valid)}
   if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) ) { train.data= list(X_train_lin_q,X_train_nn_q); print("Defining lin+NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q, nn_input_q=X_train_nn_q),Y_valid)}
@@ -288,81 +270,80 @@ bGEVPP.NN.train=function(Y_train, Y_valid = NULL,X_train_q,X_train_s, u_train = 
   if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   {train.data= list(X_train_lin_q); print("Defining fully-linear model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin_q),Y_valid)}
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_add_basis_q); print("Defining fully-additive model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list(add_input_q=X_train_add_basis_q),Y_valid)}
   if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   {train.data= list(X_train_nn_q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y_valid)) validation.data=list(list( nn_input_q=X_train_nn_q),Y_valid)}
-
+  
   X_train_nn_s=X_train_s$X_train_nn_s
   X_train_lin_s=X_train_s$X_train_lin_s
   X_train_add_basis_s=X_train_s$X_train_add_basis_s
-
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {  train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining lin+GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,u_train)); print("Defining lin+GAM model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,u_input=u_train)),Y_valid)}
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) { train.data= c(train.data,list(X_train_lin_s,X_train_nn_s,u_train)); print("Defining lin+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s, nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) {train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s,u_train)); print("Defining GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
-  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_lin_s,u_train)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,u_input=u_train)),Y_valid)}
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_add_basis_s,u_train)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,u_input=u_train)),Y_valid)}
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_nn_s,u_train)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X_train_nn_s,u_input=u_train)),Y_valid)}
-
-
+  
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {  train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s)); print("Defining lin+GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s)),Y_valid)}
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) {   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s)); print("Defining lin+GAM model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s,add_input_s=X_train_add_basis_s)),Y_valid)}
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) ) { train.data= c(train.data,list(X_train_lin_s,X_train_nn_s)); print("Defining lin+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s, nn_input_s=X_train_nn_s)),Y_valid)}
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) {train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s)); print("Defining GAM+NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s,  nn_input_s=X_train_nn_s)),Y_valid)}
+  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_lin_s)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X_train_lin_s)),Y_valid)}
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_add_basis_s)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X_train_add_basis_s)),Y_valid)}
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   {train.data= c(train.data,list(X_train_nn_s)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y_valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X_train_nn_s)),Y_valid)}
+  
+  
   if(type=="CNN" & (!is.null(X_train_nn_q) | !is.null(X_train_nn_s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & (!is.null(X_train_nn_q) | !is.null(X_train_nn_s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
-
+  
   reticulate::use_virtualenv("myenv", required = T)
-
+  
   if(!is.null(seed)) tf$random$set_seed(seed)
-
-  if(length(dim(u_train))!=length(dim(Y_train))+1) dim(u_train)=c(dim(u_train),1)
-  model<-bGEVPP.NN.build(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
+  
+  model<-bGEV.NN.build(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
                          X_train_nn_s,X_train_lin_s,X_train_add_basis_s,
-                         u_train,type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b)
+                        type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b, c1, c2)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
-
+  
   model %>% compile(
     optimizer="adam",
-    loss = bgev_PP_loss(alpha,beta,p_a,p_b,c1,c2,n_b),
+    loss = bgev_loss(alpha,beta,p_a,p_b,c1,c2),
     run_eagerly=T
   )
-
-  if(!is.null(Y_valid)) checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
-
-
+  
+  if(!is.null(Y_valid)) checkpoint <- callback_model_checkpoint(paste0("model_bGEV_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEV_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
+  
+  
   if(!is.null(Y_valid)){
     history <- model %>% fit(
       train.data, Y_train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint),
       validation_data=validation.data
-
+      
     )
   }else{
-
+    
     history <- model %>% fit(
       train.data, Y_train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint)
     )
   }
-
+  
   print("Loading checkpoint weights")
-  model <- load_model_weights_tf(model,filepath=paste0("model_bGEVPP_checkpoint"))
-
-
+  model <- load_model_weights_tf(model,filepath=paste0("model_bGEV_checkpoint"))
+  
+  
   return(model)
 }
-#' @rdname bGEVPP.NN
+#' @rdname bGEV.NN
 #' @export
 #'
-bGEVPP.NN.predict=function(X_train_q,X_train_s,u_train, model)
+bGEV.NN.predict=function(X_train_q,X_train_s, model)
 {
-    library(tensorflow)
+  library(tensorflow)
   if(is.null(X_train_q)  ) stop("No predictors provided for q_\alpha")
   if(is.null(X_train_s)  ) stop("No predictors provided for s_\beta")
-
-
-
+  
+  
+  
   X_train_nn_q=X_train_q$X_train_nn_q
   X_train_lin_q=X_train_q$X_train_lin_q
   X_train_add_basis_q=X_train_q$X_train_add_basis_q
-
-
+  
+  
   if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   train.data= list(X_train_lin_q,X_train_add_basis_q,X_train_nn_q)
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   train.data= list(X_train_lin_q,X_train_add_basis_q)
   if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )  train.data= list(X_train_lin_q,X_train_nn_q)
@@ -370,81 +351,97 @@ bGEVPP.NN.predict=function(X_train_q,X_train_s,u_train, model)
   if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )   train.data= list(X_train_lin_q)
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   train.data= list(X_train_add_basis_q)
   if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )   train.data= list(X_train_nn_q)
-
+  
   X_train_nn_s=X_train_s$X_train_nn_s
   X_train_lin_s=X_train_s$X_train_lin_s
   X_train_add_basis_s=X_train_s$X_train_add_basis_s
-
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s,u_train))
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,u_train))
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )  train.data= c(train.data,list(X_train_lin_s,X_train_nn_s,u_train))
-  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s,u_train))
-  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s,u_train))
-  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_add_basis_s,u_train))
-  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) train.data= c(train.data,list(X_train_nn_s,u_train))
-
-
-    predictions<-model %>% predict( train.data)
-    predictions <- k_constant(predictions)
-    pred.loc=k_get_value(predictions[all_dims(),2])
-    pred.spread=k_get_value(predictions[all_dims(),3])
-    pred.xi=k_get_value(predictions[all_dims(),4])
-
+  
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s,X_train_nn_s))
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s,X_train_add_basis_s))
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )  train.data= c(train.data,list(X_train_lin_s,X_train_nn_s))
+  if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) train.data= c(train.data,list(X_train_add_basis_s,X_train_nn_s))
+  if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_lin_s))
+  if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )   train.data= c(train.data,list(X_train_add_basis_s))
+  if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) ) train.data= c(train.data,list(X_train_nn_s))
+  
+  
+  predictions<-model %>% predict( train.data)
+  predictions <- k_constant(predictions)
+  pred.loc=k_get_value(predictions[all_dims(),1])
+  pred.spread=k_get_value(predictions[all_dims(),2])
+  pred.xi=k_get_value(predictions[all_dims(),3])
+  
   if(!is.null(X_train_add_basis_q))  gam.weights_q<-matrix(t(model$get_layer("add_q")$get_weights()[[1]]),nrow=dim(X_train_add_basis_q)[length(dim(X_train_add_basis_q))-1],ncol=dim(X_train_add_basis_q)[length(dim(X_train_add_basis_q))],byrow=T)
-    if(!is.null(X_train_add_basis_s))  gam.weights_s<-matrix(t(model$get_layer("add_s")$get_weights()[[1]]),nrow=dim(X_train_add_basis_s)[length(dim(X_train_add_basis_s))-1],ncol=dim(X_train_add_basis_s)[length(dim(X_train_add_basis_s))],byrow=T)
-
-    out=list("pred.loc"=pred.loc,"pred.spread"=pred.spread,"pred.xi"=pred.xi)
+  if(!is.null(X_train_add_basis_s))  gam.weights_s<-matrix(t(model$get_layer("add_s")$get_weights()[[1]]),nrow=dim(X_train_add_basis_s)[length(dim(X_train_add_basis_s))-1],ncol=dim(X_train_add_basis_s)[length(dim(X_train_add_basis_s))],byrow=T)
+  
+  out=list("pred.loc"=pred.loc,"pred.spread"=pred.spread,"pred.xi"=pred.xi)
   if(!is.null(X_train_lin_q) ) out=c(out,list("lin.coeff_q"=c(model$get_layer("lin_q")$get_weights()[[1]])))
   if(!is.null(X_train_lin_s) ) out=c(out,list("lin.coeff_s"=c(model$get_layer("lin_s")$get_weights()[[1]])))
-    if(!is.null(X_train_add_basis_q) ) out=c(out,list("gam.weights_q"=gam.weights_q))
-    if(!is.null(X_train_add_basis_s) ) out=c(out,list("gam.weights_s"=gam.weights_s))
-
+  if(!is.null(X_train_add_basis_q) ) out=c(out,list("gam.weights_q"=gam.weights_q))
+  if(!is.null(X_train_add_basis_s) ) out=c(out,list("gam.weights_s"=gam.weights_s))
+  
   return(out)
-
+  
 }
 #'
 #'
-bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
+bGEV.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
                          X_train_nn_s,X_train_lin_s,X_train_add_basis_s,
-                         u_train,
                          type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b,c1,c2)
 {
   #Additive inputs
   if(!is.null(X_train_add_basis_q))  input_add_q<- layer_input(shape = dim(X_train_add_basis_q)[-1], name = 'add_input_q')
   if(!is.null(X_train_add_basis_s))  input_add_s<- layer_input(shape = dim(X_train_add_basis_s)[-1], name = 'add_input_s')
-
+  
   #NN input
-
+  
   if(!is.null(X_train_nn_q))   input_nn_q <- layer_input(shape = dim(X_train_nn_q)[-1], name = 'nn_input_q')
   if(!is.null(X_train_nn_s))   input_nn_s <- layer_input(shape = dim(X_train_nn_s)[-1], name = 'nn_input_s')
-
+  
   #Linear input
-
+  
   if(!is.null(X_train_lin_q)) input_lin_q <- layer_input(shape = dim(X_train_lin_q)[-1], name = 'lin_input_q')
   if(!is.null(X_train_lin_s)) input_lin_s <- layer_input(shape = dim(X_train_lin_s)[-1], name = 'lin_input_s')
-
-  #Threshold input
-  input_u <- layer_input(shape = dim(u_train)[-1], name = 'u_input')
-
+  
   #Create xi branch
-
-
-  xiBranch <- input_u %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(u_train)[-1], trainable=F,
-                                       weights=list(matrix(0,nrow=dim(u_train)[length(dim(u_train))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
-    layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
-
-
-
-
+  
+  if(!is.null(X_train_nn_q)){
+    xiBranch <- input_nn_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_nn_q)[-1], trainable=F,
+                                        weights=list(matrix(0,nrow=dim(X_train_nn_q)[length(dim(X_train_nn_q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }else  if(!is.null(X_train_nn_s)){
+    xiBranch <- input_nn_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_nn_s)[-1], trainable=F,
+                                        weights=list(matrix(0,nrow=dim(X_train_nn_s)[length(dim(X_train_nn_s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }else  if(!is.null(X_train_lin_q)){
+    xiBranch <- input_lin_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_lin_q)[-1], trainable=F,
+                                        weights=list(matrix(0,nrow=dim(X_train_lin_q)[length(dim(X_train_lin_q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }else  if(!is.null(X_train_lin_s)){
+    xiBranch <- input_lin_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_lin_s)[-1], trainable=F,
+                                        weights=list(matrix(0,nrow=dim(X_train_lin_s)[length(dim(X_train_lin_s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }else if(!is.null(X_train_add_basis_q)){
+    xiBranch <- input_add_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_add_basis_q)[-1], trainable=F,
+                                            weights=list(matrix(0,nrow=dim(X_train_add_basis_q)[length(dim(X_train_add_basis_q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }else  if(!is.null(X_train_add_basis_s)){
+    xiBranch <- input_add_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X_train_add_basis_s)[-1], trainable=F,
+                                            weights=list(matrix(0,nrow=dim(X_train_add_basis_s)[length(dim(X_train_add_basis_s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+      layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
+  }
+  
+  
+  
   if(link.loc=="exp") init.loc=log(init.loc) else if(link.loc =="identity") init.loc=init.loc else stop("Invalid link function for location parameter")
   #NN towers
-
+  
   #Location
   if(!is.null(X_train_nn_q)){
-
+    
     nunits=c(widths,1)
     n.layers=length(nunits)-1
-
+    
     nnBranchq <- input_nn_q
     if(type=="MLP"){
       for(i in 1:n.layers){
@@ -456,19 +453,19 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
         nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
                                                   input_shape =dim(X_train_nn_q)[-1], name = paste0('nn_q_cnn',i) )
       }
-
+      
     }
-
+    
     nnBranchq <-   nnBranchq  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_q_dense_final',
                                                 weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.loc)))
-
+    
   }
-#Spread
-    if(!is.null(X_train_nn_s)){
-
+  #Spread
+  if(!is.null(X_train_nn_s)){
+    
     nunits=c(widths,1)
     n.layers=length(nunits)-1
-
+    
     nnBranchs <- input_nn_s
     if(type=="MLP"){
       for(i in 1:n.layers){
@@ -480,25 +477,25 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
         nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
                                                   input_shape =dim(X_train_nn_s)[-1], name = paste0('nn_s_cnn',i) )
       }
-
+      
     }
-
+    
     nnBranchs <-   nnBranchs  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_s_dense_final',
                                                 weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.spread)))
-
+    
   }
   #Additive towers
   #Location
   n.dim.add_q=length(dim(X_train_add_basis_q))
   if(!is.null(X_train_add_basis_q) & !is.null(X_train_add_basis_q) ) {
-
+    
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis_q)[2:(n.dim.add_q-2)],prod(dim(X_train_add_basis_q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_q',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis_q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1)),use_bias = F)
   }
   if(!is.null(X_train_add_basis_q) & is.null(X_train_add_basis_q) ) {
-
+    
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis_q)[2:(n.dim.add_q-2)],prod(dim(X_train_add_basis_q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_q',
@@ -507,25 +504,25 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   #Location
   n.dim.add_s=length(dim(X_train_add_basis_s))
   if(!is.null(X_train_add_basis_s) & !is.null(X_train_add_basis_s) ) {
-
+    
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis_s)[2:(n.dim.add_s-2)],prod(dim(X_train_add_basis_s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_s',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis_s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1)),use_bias = F)
   }
   if(!is.null(X_train_add_basis_s) & is.null(X_train_add_basis_s) ) {
-
+    
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X_train_add_basis_s)[2:(n.dim.add_s-2)],prod(dim(X_train_add_basis_s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_s',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis_s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1),array(init.spread)),use_bias = T)
   }
   #Linear towers
-
+  
   #Location
   if(!is.null(X_train_lin_q) ) {
     n.dim.lin_q=length(dim(X_train_lin_q))
-
+    
     if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q )){
       linBranchq <- input_lin_q%>%
         layer_dense(units = 1, activation = 'linear',
@@ -541,7 +538,7 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   #Spread
   if(!is.null(X_train_lin_s) ) {
     n.dim.lin_s=length(dim(X_train_lin_s))
-
+    
     if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s )){
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
@@ -554,7 +551,7 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
                     weights=list(matrix(0,nrow=dim(X_train_lin_s)[n.dim.lin_s],ncol=1)),use_bias=F)
     }
   }
-
+  
   #Location
   if(!is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
@@ -563,7 +560,7 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   if(is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & !is.null(X_train_lin_q) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X_train_nn_q) & !is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X_train_nn_q) & is.null(X_train_add_basis_q) & is.null(X_train_lin_q) )  qBranchjoined <- nnBranchq  #Just nn tower
-
+  
   #Spread
   if(!is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs))  #Add all towers
   if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs))  #Add GAM+lin towers
@@ -572,11 +569,11 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   if(is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & !is.null(X_train_lin_s) )  sBranchjoined <- linBranchs  #Just lin tower
   if(is.null(X_train_nn_s) & !is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )  sBranchjoined <- addBranchs  #Just GAM tower
   if(!is.null(X_train_nn_s) & is.null(X_train_add_basis_s) & is.null(X_train_lin_s) )  sBranchjoined <- nnBranchs  #Just nn tower
-
+  
   #Apply link functions
   if(link.loc=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential') else if(link.loc=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity')
   sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential')
-
+  
   input=c()
   if(!is.null(X_train_lin_q) ) input=c(input,input_lin_q)
   if(!is.null(X_train_add_basis_q) ) input=c(input,input_add_q)
@@ -584,158 +581,104 @@ bGEVPP.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   if(!is.null(X_train_lin_s) ) input=c(input,input_lin_s)
   if(!is.null(X_train_add_basis_s) ) input=c(input,input_add_s)
   if(!is.null(X_train_nn_s) ) input=c(input,input_nn_s)
-  input=c(input,input_u)
-
-
-  output <- layer_concatenate(c(input_u,qBranchjoined,sBranchjoined, xiBranch))
-
-  model <- keras_model(  inputs = input,   outputs = output,name=paste0("bGEV-PP"))
+  input=c(input)
+  
+  
+  output <- layer_concatenate(c(qBranchjoined,sBranchjoined, xiBranch))
+  
+  model <- keras_model(  inputs = input,   outputs = output,name=paste0("bGEV"))
   print(model)
-
+  
   return(model)
-
+  
 }
 
 
 l=function(a,xi){
   K <- backend()
-
+  
   # K$exp(-xi*K$log(-K$log(a)))
-
+  
   (-K$log(a))^(-xi)
 }
 l0 = function(a){
   K <- backend()
-
+  
   K$log(-K$log(a))
 }
 
 Finverse = function(x,q_a,s_b,xi,alpha,beta){
   K <- backend()
-
+  
   ( (-K$log(x))^(-xi)-l(alpha,xi))*s_b/(l(1-beta/2,xi)-l(beta/2,xi))+q_a
 }
 
 logH=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds){
   K <- backend()
-
+  
   #Upper tail
   z1=(y-q_a)/(s_b/(l(1-beta/2,xi)-l(beta/2,xi)))+l(alpha,xi)
   z1=K$relu(z1)
-
+  
   zeroz1_inds=1-K$sign(z1)
   t1=(z1+(1-obsInds)+zeroz1_inds)^(-1/xi)
-
+  
   #Weight
-
-
+  
+  
   beta_dist=tfd_beta(concentration1 = c1,concentration0 = c2)
   p= beta_dist %>% tfd_cdf((y-a)/(b-a)*obsInds)
-
+  
   #Lower tail
   q_a_tilde=a-(b-a)*(l0(alpha)-l0(p_a))/(l0(p_a)-l0(p_b))
   s_b_tilde=(b-a)*(l0(beta/2)-l0(1-beta/2))/(l0(p_a)-l0(p_b))
   s_b_tilde =s_b_tilde + (1-obsInds)
-
+  
   z2=(y-q_a_tilde)/(s_b_tilde/(l0(beta/2)-l0(1-beta/2)))-l0(alpha)
   z2=z2*obsInds
-
+  
   t2=K$exp(-z2)
-
-
-
-
+  
+ 
+  
   return((p*(-t1)*(1-zeroz1_inds)+(1-p)*(-t2))*obsInds)
 }
-lambda=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds){
-  K <- backend()
-  #Upper tail
-  z1=((y-q_a)/(s_b/(l(1-beta/2,xi)-l(beta/2,xi))))+l(alpha,xi)
-  z1=K$relu(z1)
-  z1=z1*exceedInds
-  zeroz1_inds=1-K$sign(z1)
-  t1=(z1+(1-obsInds)+zeroz1_inds)^(-1/xi)
 
-  #Weight
-
-  beta_dist=tfd_beta(concentration1 = c1,concentration0 = c2)
-  p= beta_dist %>% tfd_cdf(((y-a)/(b-a))*exceedInds)
-
-  temp=(y-a)/(b-a) #Need to set values <0 and >1 to 0 and 1, otherwise function breaks
-  temp=K$relu(temp)
-  temp=1-temp
-  temp=K$relu(temp)
-  temp=1-temp
-  pprime = temp^(c1-1)*(1-temp)^(c2-1)/beta(c1,c2)
-  pprime=pprime/(b-a)*exceedInds
-
-
-  #Lower tail
-  q_a_tilde=a-(b-a)*(l0(alpha)-l0(p_a))/(l0(p_a)-l0(p_b))
-  s_b_tilde=(b-a)*(l0(beta/2)-l0(1-beta/2))/(l0(p_a)-l0(p_b))
-  s_b_tilde=s_b_tilde+(1-obsInds)
-  z2=(y-q_a_tilde)/(s_b_tilde/(l0(beta/2)-l0(1-beta/2)))-l0(alpha)
-  z2=z2*exceedInds
-  t2=K$exp(-z2)
-
-
-  z1prime=(l(1-beta/2,xi)-l(beta/2,xi))/s_b
-
-  z2prime=(l0(beta/2)-l0(1-beta/2))/s_b_tilde
-
-  out=(
-    (pprime*(-t1)
-     +p*(1/xi)*t1/(z1+zeroz1_inds)*z1prime)*(1-zeroz1_inds)
-    - pprime*(-t2)
-    +(1-p)*t2*z2prime
-  )
-  return(
-    out*exceedInds
-  )
-}
-
-bgev_PP_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,n_b=1){
-
-loss<- function( y_true, y_pred) {
-
-  library(tensorflow)
-  K <- backend()
-
-  u=y_pred[all_dims(),1]
-  q_a=y_pred[all_dims(),2]
-  s_b=y_pred[all_dims(),3]
-  xi=y_pred[all_dims(),4]
-
-
-
-
-  # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
-  # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-  obsInds=K$sign(K$relu(y_true+1e4))
-
-  #Find exceedance inds
-  exceed=y_true-u
-  exceedInds=K$sign(K$relu(exceed))
-
-
-  a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
-  b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
-  b =b + (1-obsInds)
-  s_b=s_b+(1-obsInds)
-
-  #Use exceedance only only
-  lam=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
-  loglam=K$log(lam+(1-exceedInds))*exceedInds
-
-
-
-  #Use all values of y_true i.e., non-exceedances + exceedances.
-
-  LAM=-logH(u,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds) #1/12 as 12 obs per year
-  return(-(
-    K$sum(loglam)
-    -(1/n_b)*K$sum(LAM)
-  ))
-}
-return(loss)
+bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
+  
+  loss<- function( y_true, y_pred) {
+    
+    library(tensorflow)
+    K <- backend()
+    
+    
+    q_a=y_pred[all_dims(),1]
+    s_b=y_pred[all_dims(),2]
+    xi=y_pred[all_dims(),3]
+    
+    
+    
+    
+    # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+    # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
+    obsInds=K$sign(K$relu(y_true+1e4))
+    
+  
+    
+    a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
+    b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
+    b =b + (1-obsInds)
+    s_b=s_b+(1-obsInds)
+    
+    
+    l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+    l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+    
+    l2=K$log(l2+(1-obsInds))*obsInds
+    
+    return( -K$sum(l1)
+            -K$sum(l2) 
+            )
+  }
+  return(loss)
 }

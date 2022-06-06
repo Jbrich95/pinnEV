@@ -4,18 +4,24 @@
 \alias{bGEV}
 \alias{pbGEV}
 \alias{qbGEV}
+\alias{rbGEV}
 \title{The blended-GEV distribution}
 \usage{
-pbGEV(y, q_alpha, a_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
+pbGEV(y, q_alpha, s_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
   p_b = 0.2, c1 = 5, c2 = 5, log = F)
 
-qbGEV(prob, q_alpha, a_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
+qbGEV(prob, q_alpha, s_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
+  p_b = 0.2, c1 = 5, c2 = 5)
+
+rbGEV(n, q_alpha, s_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
   p_b = 0.2, c1 = 5, c2 = 5)
 }
 \arguments{
 \item{y}{scalar quantile.}
 
 \item{q_alpha}{scalar location parameter.}
+
+\item{s_beta}{scalar spread parameter.}
 
 \item{xi}{scalar shape parameter.}
 
@@ -25,16 +31,16 @@ qbGEV(prob, q_alpha, a_beta, xi, alpha = 0.5, beta = 0.5, p_a = 0.05,
 
 \item{prob}{scalar probability.}
 
-\item{s_beta}{scalar spread parameter.}
+\item{n}{number of replications.}
 }
 \value{
 {
-\code{pbGEV} gives the distribution function; \code{qbGEV} gives the quantile function
+\code{pbGEV} gives the distribution function; \code{qbGEV} gives the quantile function; \code{rbGEV} generates random deviates.
 }
 }
 \description{
-Distribution and quantile function for the blended generalised extreme value (bGEV) distribution with location equal to \code{q_alpha}, spread equal to \code{s_beta} and shape equal to \code{xi}.
-Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors.
+Distribution function, quantile function and random generation for the blended generalised extreme value (bGEV) distribution with location equal to \code{q_alpha}, spread equal to \code{s_beta} and shape equal to \code{xi}.
+Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors, for the parameters.
 }
 \details{
 {

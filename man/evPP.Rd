@@ -43,7 +43,7 @@ rPP(n, u.prob, loc, scale, xi, n_b = 1, re.par = F, alpha = 0.5,
 }
 \description{
 Quantile function and random generation for the extreme value point process with location equal to \code{loc}, scale equal to \code{scale} and shape equal to \code{xi >= 0}.
-Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors.
+Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors, for the parameters.
 }
 \details{
 Following Coles (2001), consider a sequence of independent random variables \eqn{Y_1,\dots,Y_n} with common distribution function \eqn{F}. For \eqn{n_b}-block-maxima \eqn{M_{n_b}=\max\{Y_1,\dots,Y_{n_b}\}};

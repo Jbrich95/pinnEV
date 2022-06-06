@@ -6,19 +6,19 @@
 \alias{logistic.NN.predict}
 \title{Logistic regression PINN}
 \usage{
-logistic.NN.train(Y_train, Y_test = NULL, X_train, type = "MLP",
+logistic.NN.train(Y_train, Y_valid = NULL, X_train, type = "MLP",
   n.ep = 100, batch.size = 100, init.p = NULL, widths = c(6, 3),
   filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL)
 
 logistic.NN.predict(X_train, model)
 }
 \arguments{
-\item{Y_train, Y_test}{a 2 or 3 dimensional array of training or test response values, with entries of 0/1 for failure/success.
-Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
+\item{Y_train, Y_valid}{a 2 or 3 dimensional array of training or validation response values, with entries of 0/1 for failure/success.
+Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_valid} to \code{-1e5}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
+If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
 \item{X_train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
 \item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
@@ -29,7 +29,7 @@ If \code{NULL}, a model without the additive component is built and trained.}
 \item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_test}.}
+Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_valid}.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
 
@@ -68,7 +68,7 @@ and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is est
 
 The model is fitted by minimising the binary cross-entropy loss over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
-The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
+The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
 
 }
 }
@@ -103,15 +103,15 @@ sin(X_train_nn[,,,1]-X_train_nn[,,,2])*(X_train_nn[,,,4]+X_train_nn[,,,5])
 p=0.5+0.5*tanh((m_L+m_A+m_N)/2) #Logistic link
 Y=apply(p,1:3,function(x) rbinom(1,1,x))
 
-#Create training and test, respectively.
-#We mask 20\% of the Y values and use this for validation/testing.
+#Create training and validation, respectively.
+#We mask 20\% of the Y values and use this for validation
 #Masked values must be set to -1e5 and are treated as missing whilst training
 
 mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 
-Y_train<-Y_test<-Y #Create training and test, respectively.
+Y_train<-Y_valid<-Y #Create training and validation, respectively.
 Y_train[-mask_inds]=-1e5
-Y_test[mask_inds]=-1e5
+Y_valid[mask_inds]=-1e5
 
 
 
@@ -142,7 +142,7 @@ X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,
 "X_train_add_basis"=X_train_add_basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-logistic.NN.train(Y_train, Y_test,X_train,  type="MLP",n.ep=2000,
+model<-logistic.NN.train(Y_train, Y_valid,X_train,  type="MLP",n.ep=2000,
                       batch.size=50,init.p=0.4, widths=c(6,3))
 
 out<-predict_bernoulli_nn(X_train,model)

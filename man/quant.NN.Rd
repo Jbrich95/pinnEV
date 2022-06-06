@@ -6,7 +6,7 @@
 \alias{quant.NN.predict}
 \title{Non-parametric single quantile regression PINN}
 \usage{
-quant.NN.train(Y_train, Y_test = NULL, X_train, type = "MLP",
+quant.NN.train(Y_train, Y_valid = NULL, X_train, type = "MLP",
   link = "identity", tau = NULL, n.ep = 100, batch.size = 100,
   init.q = NULL, widths = c(6, 3), filter.dim = c(3, 3), seed = NULL,
   init.wb_path = NULL)
@@ -14,12 +14,12 @@ quant.NN.train(Y_train, Y_test = NULL, X_train, type = "MLP",
 quant.NN.predict(X_train, model)
 }
 \arguments{
-\item{Y_train, Y_test}{a 2 or 3 dimensional array of training or test real response values.
-Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_test} to \code{-1e5}.
+\item{Y_train, Y_valid}{a 2 or 3 dimensional array of training or validation real response values.
+Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_valid} to \code{-1e5}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y_train} and \code{Y_test} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-If \code{Y_test==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
+If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
 \item{X_train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
 \item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
@@ -30,7 +30,7 @@ If \code{NULL}, a model without the additive component is built and trained.}
 \item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_test}.}
+Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_valid}.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
 
@@ -72,9 +72,9 @@ constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated 
 both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network.
 
 The model is fitted by minimising the tiled loss over \code{n.ep} training epochs; the loss is given by
-\deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} and is averaged over all entries to \code{Y_train} (or \code{Y_test}).
+\deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} and is averaged over all entries to \code{Y_train} (or \code{Y_valid}).
 Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
-The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation/test set \code{Y_test} if \code{!is.null(Y_test)} and for \code{Y_train}, otherwise.
+The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
 
 }
 }
@@ -110,15 +110,15 @@ theta=1+m_L+m_A+m_N #Identity link
 #as the form for this is known
 Y=apply(theta,1:3,function(x) rnorm(1,mean=x,sd=2))
 
-#Create training and test, respectively.
-#We mask 20\% of the Y values and use this for validation/testing.
+#Create training and validation, respectively.
+#We mask 20\% of the Y values and use this for validation.
 #Masked values must be set to -1e5 and are treated as missing whilst training
 
 mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 
-Y_train<-Y_test<-Y #Create training and test, respectively.
+Y_train<-Y_valid<-Y #Create training and validation, respectively.
 Y_train[-mask_inds]=-1e5
-Y_test[mask_inds]=-1e5
+Y_valid[mask_inds]=-1e5
 
 
 
@@ -149,7 +149,7 @@ X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,
 "X_train_add_basis"=X_train_add_basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-quant.NN.train(Y_train, Y_test,X_train,  type="MLP",link="identity",tau=0.5,n.ep=50,
+model<-quant.NN.train(Y_train, Y_valid,X_train,  type="MLP",link="identity",tau=0.5,n.ep=50,
                       batch.size=50, widths=c(6,3))
 
 out<-quant.NN.predict(X_train,model)

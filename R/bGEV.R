@@ -1,7 +1,7 @@
 #' The blended-GEV distribution
 #'
-#' Distribution and quantile function for the blended generalised extreme value (bGEV) distribution with location equal to \code{q_alpha}, spread equal to \code{s_beta} and shape equal to \code{xi}.
-#' Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors.
+#' Distribution function, quantile function and random generation for the blended generalised extreme value (bGEV) distribution with location equal to \code{q_alpha}, spread equal to \code{s_beta} and shape equal to \code{xi}.
+#' Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors, for the parameters.
 #'
 #'@param y scalar quantile.
 #'@param prob scalar probability.
@@ -10,6 +10,7 @@
 #'@param xi scalar shape parameter.
 #'@param alpha,beta,p_a,p_b,c1,c2 hyper-parameters for the bGEV distribution, see details. Defaults set to those proposed by Castro-Camilo et al. (2021).
 #'@param log logical; if \code{TRUE}, probabilities are given as \code{log(prob)}.
+#'@param n number of replications.
 #'
 #'@name bGEV
 #'
@@ -36,7 +37,7 @@
 #'\eqn{\tilde{s}_\beta=(b-a)(l_{\beta/2}-l_{1-\beta/2})/(l_{p_a}-l_{p_b})}.
 #'}
 #' @return{
-#' \code{pbGEV} gives the distribution function; \code{qbGEV} gives the quantile function
+#' \code{pbGEV} gives the distribution function; \code{qbGEV} gives the quantile function; \code{rbGEV} generates random deviates.
 #' }
 #'
 #'
@@ -49,14 +50,14 @@
 #' @rdname bGEV
 #' @export
 #'
- pbGEV=function(y,q_alpha,a_beta,xi,alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,log=F){
+ pbGEV=function(y,q_alpha,s_beta,xi,alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,log=F){
 
 
-a=Finverse_r(p_a,q_alpha,a_beta,xi,alpha,beta)
-b=Finverse_r(p_b,q_alpha,a_beta,xi,alpha,beta)
+a=Finverse_r(p_a,q_alpha,s_beta,xi,alpha,beta)
+b=Finverse_r(p_b,q_alpha,s_beta,xi,alpha,beta)
 
 #Upper tail
-z1=(y-q_alpha)/(a_beta/(l_r(1-beta/2,xi)-l_r(beta/2,xi)))+l_r(alpha,xi)
+z1=(y-q_alpha)/(s_beta/(l_r(1-beta/2,xi)-l_r(beta/2,xi)))+l_r(alpha,xi)
 z1=max(z1,0)
 
 t1=(z1)^(-1/xi)
@@ -88,17 +89,17 @@ return(out)
  #' @rdname bGEV
  #' @export
  #'
-qbGEV=function(prob,q_alpha,a_beta,xi,alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
+qbGEV=function(prob,q_alpha,s_beta,xi,alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
 
   if(prob < p_b){
     func=function(x){
-      prob-pbGEV(x,q_alpha,a_beta,xi,alpha,beta,p_a,p_b,c1,c2)
+      prob-pbGEV(x,q_alpha,s_beta,xi,alpha,beta,p_a,p_b,c1,c2)
     }
     return( uniroot(f=func,interval=c(-1e8,1e8),tol=1e-5 )$root)
   }else{
     #Not using tensors
 
-    return(Finverse_r(prob,q_alpha,a_beta,xi,alpha,beta))
+    return(Finverse_r(prob,q_alpha,s_beta,xi,alpha,beta))
 
   }
 }
@@ -114,9 +115,18 @@ l0_r = function(a){
   log(-log(a))
 }
 
-Finverse_r = function(x,q_alpha,a_beta,xi,alpha,beta){
+Finverse_r = function(x,q_alpha,s_beta,xi,alpha,beta){
 
 
-  ( (-log(x))^(-xi)-l_r(alpha,xi))*a_beta/(l_r(1-beta/2,xi)-l_r(beta/2,xi))+q_alpha
+  ( (-log(x))^(-xi)-l_r(alpha,xi))*s_beta/(l_r(1-beta/2,xi)-l_r(beta/2,xi))+q_alpha
 }
 
+#' @rdname bGEV
+#' @export
+#'
+rbGEV=function(n,q_alpha,s_beta,xi,alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
+    out <- rep(0,n)
+    for(i in 1:n) out[i]=qbGEV(runif(1),q_alpha,s_beta,xi,alpha,beta,p_a,p_b,c1,c2)
+    return(out)
+
+}

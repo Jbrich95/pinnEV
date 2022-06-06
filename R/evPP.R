@@ -1,7 +1,7 @@
 #' The extreme value point process
 #'
 #' Quantile function and random generation for the extreme value point process with location equal to \code{loc}, scale equal to \code{scale} and shape equal to \code{xi >= 0}.
-#' Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors.
+#' Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors, for the parameters.
 #'
 #'@param prob scalar probability.
 #'@param loc  location parameter. If \code{re.par==FALSE}, then \code{loc} corresponds to \eqn{\mu}; otherwise, \code{loc} corresponds to \eqn{q_\alpha}.
