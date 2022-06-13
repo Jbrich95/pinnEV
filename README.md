@@ -19,6 +19,8 @@ library(keras)
 library(tfprobability)
 #Create a virtual envionment 'myenv' with Python3.7. Install tensorflow and tfprobability within this environment.
 reticulate::virtualenv_create(envname = 'myenv',  python= 'python3.7')
+path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
+Sys.setenv(RETICULATE_PYTHON = path)
 reticulate::use_virtualenv("myenv", required = T)
 reticulate::virtualenv_install("myenv",packages = "tensorflow")
 install_keras(method = c("virtualenv"), envname = "myenv") #Install CPU version of tensorflow
@@ -30,5 +32,4 @@ reticulate::virtualenv_install("myenv",packages = "tensorflow_probability")
 install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14.0")
 
 ```
-Note that if you are using Rstudio, you may need to change the Python interpreter to the newly created 'myenv'. This can be done (in Rstudio 2021.09.0+351) by navigating to Tools->Global Options->Python->Python interpreter->Select->Virtual Environments and then selecting the path to 'myenv'.
 
