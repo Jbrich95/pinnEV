@@ -21,7 +21,7 @@ If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three di
 If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
 \item{X_train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
-\item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn}. If \code{NULL}, a model without the linear component is built and trained.
+\item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y_train}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
 \item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.

@@ -13,7 +13,7 @@
 #' If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
 #' @param X_train_q  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{q_\alpha}. Must contain at least one of the following three named entries:\describe{
-#' \item{\code{X_train_lin_q}}{A 3 or 4 dimensional array of "linear" predictor values. Same number of dimensions as \code{X_train_nn_1}. If \code{NULL}, a model without the linear component is built and trained.
+#' \item{\code{X_train_lin_q}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y_train}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
 #' \item{\code{X_train_add_basis_q}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 #' The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a_1\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
@@ -190,7 +190,7 @@
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
-#'
+#' 
 #' #To save model, run
 #' #model %>% save_model_tf("model_bGEV")
 #' #To load model, run
@@ -434,6 +434,8 @@ bGEV.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
   
   
   if(link.loc=="exp") init.loc=log(init.loc) else if(link.loc =="identity") init.loc=init.loc else stop("Invalid link function for location parameter")
+  init.spread=log(init.spread)
+  
   #NN towers
   
   #Location
@@ -501,7 +503,7 @@ bGEV.NN.build=function(X_train_nn_q,X_train_lin_q,X_train_add_basis_q,
       layer_dense(units = 1, activation = 'linear', name = 'add_q',
                   weights=list(matrix(0,nrow=prod(dim(X_train_add_basis_q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1),array(init.loc)),use_bias = T)
   }
-  #Location
+  #Spread
   n.dim.add_s=length(dim(X_train_add_basis_s))
   if(!is.null(X_train_add_basis_s) & !is.null(X_train_add_basis_s) ) {
     
@@ -643,7 +645,52 @@ logH=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds){
   
   return((p*(-t1)*(1-zeroz1_inds)+(1-p)*(-t2))*obsInds)
 }
-
+lambda=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds){
+  K <- backend()
+  #Upper tail
+  z1=((y-q_a)/(s_b/(l(1-beta/2,xi)-l(beta/2,xi))))+l(alpha,xi)
+  z1=K$relu(z1)
+  z1=z1*exceedInds
+  zeroz1_inds=1-K$sign(z1)
+  t1=(z1+(1-obsInds)+zeroz1_inds)^(-1/xi)
+  
+  #Weight
+  
+  beta_dist=tfd_beta(concentration1 = c1,concentration0 = c2)
+  p= beta_dist %>% tfd_cdf(((y-a)/(b-a))*exceedInds)
+  
+  temp=(y-a)/(b-a) #Need to set values <0 and >1 to 0 and 1, otherwise function breaks
+  temp=K$relu(temp)
+  temp=1-temp
+  temp=K$relu(temp)
+  temp=1-temp
+  pprime = temp^(c1-1)*(1-temp)^(c2-1)/beta(c1,c2)
+  pprime=pprime/(b-a)*exceedInds
+  
+  
+  #Lower tail
+  q_a_tilde=a-(b-a)*(l0(alpha)-l0(p_a))/(l0(p_a)-l0(p_b))
+  s_b_tilde=(b-a)*(l0(beta/2)-l0(1-beta/2))/(l0(p_a)-l0(p_b))
+  s_b_tilde=s_b_tilde+(1-obsInds)
+  z2=(y-q_a_tilde)/(s_b_tilde/(l0(beta/2)-l0(1-beta/2)))-l0(alpha)
+  z2=z2*exceedInds
+  t2=K$exp(-z2)
+  
+  
+  z1prime=(l(1-beta/2,xi)-l(beta/2,xi))/s_b
+  
+  z2prime=(l0(beta/2)-l0(1-beta/2))/s_b_tilde
+  
+  out=(
+    (pprime*(-t1)
+     +p*(1/xi)*t1/(z1+zeroz1_inds)*z1prime)*(1-zeroz1_inds)
+    - pprime*(-t2)
+    +(1-p)*t2*z2prime
+  )
+  return(
+    out*exceedInds
+  )
+}
 bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
   
   loss<- function( y_true, y_pred) {
