@@ -65,6 +65,6 @@ for small \eqn{0<p_a<p_b<1} and let \eqn{\tilde{q}_\alpha=a-(b-a)(l_\alpha-l_{p_
 }
 }
 \references{
-Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for GEV-based regression models for extremes}, arXiv.
-(\href{https://doi.org/10.48550/arXiv.2106.13110}{doi})
+Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
+(\href{https://doi.org/10.1002/env.2742}{doi})
 }

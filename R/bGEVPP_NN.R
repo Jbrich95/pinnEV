@@ -63,8 +63,8 @@
 #' @return \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
 #'
 #'@references
-#' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for GEV-based regression models for extremes}, arXiv.
-#' (\href{https://doi.org/10.48550/arXiv.2106.13110}{doi})
+#' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
+#' (\href{https://doi.org/10.1002/env.2742}{doi})
 #'
 #'Richards, J. and Huser, R. (2022), \emph{High-dimensional extreme quantile regression using 
 #'partially-interpretable neural networks: With application to U.S. wildfires.}
