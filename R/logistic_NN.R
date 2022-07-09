@@ -354,14 +354,18 @@ logistic.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.
 
 
 bce_loss <- function( y_true, y_pred) {
-
+  
   K <- backend()
   p=y_pred
-
+  
   obsInds=K$sign(K$relu(y_true+1e4))
-
+  
+  #This will change the predicted p to 0.5 where there are no observations. Will fix likelihood evaluation issues!
+  p=p-3*(1-obsInds)
+  p=K$relu(p)+0.5*(1-obsInds)
+  
   loss <- K$abs(y_true)*K$log(p)+K$abs(1-y_true)*K$log(1-p)
   loss <- -K$sum(loss * obsInds)/K$sum(obsInds)
-
+  
   return(loss)
 }
