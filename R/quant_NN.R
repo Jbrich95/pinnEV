@@ -5,27 +5,27 @@
 #'@name quant.NN
 
 #' @param type string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
-#' @param Y_train,Y_valid a 2 or 3 dimensional array of training or validation real response values.
-#' Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_valid} to \code{-1e5}.
+#' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
+#' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e5}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
-#' If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-#' If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
+#' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+#' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#' @param X_train list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
-#' \item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y_train}. If \code{NULL}, a model without the linear component is built and trained.
-#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
-#' \item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
-#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
+#' @param X.train list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
+#' \item{\code{X.train.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+#' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
+#' \item{\code{X.train.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+#' The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 #' If \code{NULL}, a model without the additive component is built and trained.}
-#' \item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
-#' The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
+#' \item{\code{X.train.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
+#' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_valid}.
+#' Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.valid}.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param tau  quantile level. Must satisfy \code{0 < tau < 1}.
-#' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.q sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y_train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.
+#' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
+#' @param init.q sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial quantile estimate is \code{init.q} across all dimensions.
@@ -34,6 +34,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param link string defining the link function used, see \eqn{h} below. If \code{link=="exp"}, then \eqn{h=\exp(x)}; if \code{link=="identity"}, then \eqn{h(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{quant.NN.train}.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
 
 #' @details{
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
@@ -43,13 +44,17 @@
 #' constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
 #' both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network.
 #'
-#' The model is fitted by minimising the tiled loss over \code{n.ep} training epochs; the loss is given by
-#' \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} and is averaged over all entries to \code{Y_train} (or \code{Y_valid}).
-#' Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
-#' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
+#' The model is fitted by minimising the penalised tilted loss over \code{n.ep} training epochs; the loss is given by
+#' \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
+#' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
+#' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
 #'}
 #' @return \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
+#'
+#' @references
+#'Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+#'
 #'
 #' @examples
 #'
@@ -57,26 +62,26 @@
 #' # Build and train a simple MLP for toy data
 #'
 #' # Create 'nn', 'additive' and 'linear' predictors
-#' X_train_nn<-rnorm(5000); X_train_add<-rnorm(2000); X_train_lin<-rnorm(3000)
+#' X.train.nn<-rnorm(5000); X.train.add<-rnorm(2000); X.train.lin<-rnorm(3000)
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
 #' #last to the different components of the predictor set
-#' dim(X_train_nn)=c(10,10,10,5) #Five nn predictors
-#' dim(X_train_lin)=c(10,10,10,3) #Three linear predictors
-#' dim(X_train_add)=c(10,10,10,2) #Two additive predictors
+#' dim(X.train.nn)=c(10,10,10,5) #Five nn predictors
+#' dim(X.train.lin)=c(10,10,10,3) #Three linear predictors
+#' dim(X.train.add)=c(10,10,10,2) #Two additive predictors
 #'
 #' # Create toy response data
 #'
 #' #Linear contribution
-#' m_L = 0.3*X_train_lin[,,,1]+0.6*X_train_lin[,,,2]-0.2*X_train_lin[,,,3]
+#' m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
 #'
 #' # Additive contribution
-#' m_A = 0.1*X_train_add[,,,1]^2+0.2*X_train_add[,,,1]-0.1*X_train_add[,,,2]^3+
-#' 0.5*X_train_add[,,,2]^2
+#' m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^3+
+#' 0.5*X.train.add[,,,2]^2
 #'
 #' #Non-additive contribution - to be estimated by NN
-#' m_N = exp(-3+X_train_nn[,,,2]+X_train_nn[,,,3])+
-#' sin(X_train_nn[,,,1]-X_train_nn[,,,2])*(X_train_nn[,,,4]+X_train_nn[,,,5])
+#' m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
+#' sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,4]+X.train.nn[,,,5])
 #'
 #'theta=1+m_L+m_A+m_N #Identity link
 #' #We simulate normal data and estimate the median, i.e., the 50% quantile or mean,
@@ -90,14 +95,14 @@
 #'
 #' mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 #'
-#' Y_train<-Y_valid<-Y #Create training and validation, respectively.
-#' Y_train[-mask_inds]=-1e5
-#' Y_valid[mask_inds]=-1e5
+#' Y.train<-Y.valid<-Y #Create training and validation, respectively.
+#' Y.train[-mask_inds]=-1e5
+#' Y.valid[mask_inds]=-1e5
 #'
 #'
 #'
 #' #To build a model with an additive component, we require an array of evaluations of
-#' #the basis functions for each pre-specified knot and entry to X_train_add
+#' #the basis functions for each pre-specified knot and entry to X.train.add
 #'
 #' rad=function(x,c){ #Define a basis function. Here we use the radial bases
 #'   out=abs(x-c)^2*log(abs(x-c))
@@ -106,32 +111,47 @@
 #' }
 #'
 #' n.knot = 5 # set number of knots. Must be the same for each additive predictor
-#' knots=matrix(nrow=dim(X_train_add)[4],ncol=n.knot)
+#' knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
 #'
 #' #We set knots to be equally-spaced marginal quantiles
-#' for( i in 1:dim(X_train_add)[4]) knots[i,]=quantile(X_train_add[,,,i],probs=seq(0,1,length=n.knot))
+#' for( i in 1:dim(X.train.add)[4]) knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
 #'
-#' X_train_add_basis<-array(dim=c(dim(X_train_add),n.knot))
-#' for( i in 1:dim(X_train_add)[4]) {
+#' X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
+#' for( i in 1:dim(X.train.add)[4]) {
 #' for(k in 1:n.knot) {
-#' X_train_add_basis[,,,i,k]= rad(x=X_train_add[,,,i],c=knots[i,k])
-#' #Evaluate rad at all entries to X_train_add and for all knots
+#' X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
+#' #Evaluate rad at all entries to X.train.add and for all knots
 #' }}
+#' 
+#' 
+#' #Penalty matrix for additive functions
+#' 
+#'# Set smoothness parameters for first and second addictive functions
+#'  lambda = c(0.5,1) 
+#'  
+#'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
+#'for(i in 1:dim(X.train.add)[4]){
+#'  for(j in 1:n.knot){
+ #'   for(k in 1:n.knot){
+#'      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
+ #'   }
+ #' }
+#'}
 #'
 #'#Build lin+GAM+NN model.
-#' X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,
-#' "X_train_add_basis"=X_train_add_basis)
+#' X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
+#' "X.train.add.basis"=X.train.add.basis)
 #'
 #'#Build and train a two-layered "lin+GAM+NN" MLP
-#' model<-quant.NN.train(Y_train, Y_valid,X_train,  type="MLP",link="identity",tau=0.5,n.ep=50,
-#'                       batch.size=50, widths=c(6,3))
+#' model<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
+#'                       batch.size=50, widths=c(6,3),S_lambda=S_lambda)
 #'
-#' out<-quant.NN.predict(X_train,model)
+#' out<-quant.NN.predict(X.train,model)
 #'hist(out$predictions) #Plot histogram of predicted quantiles
 
 #' print(out$lin.coeff)
 #'
-#'n.add.preds=dim(X_train_add)[length(dim(X_train_add))]
+#'n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
 #'par(mfrow=c(1,n.add.preds))
 #'for(i in 1:n.add.preds){
 #'  plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis
@@ -152,57 +172,59 @@
 #'# model %>% save_model_tf(paste0("model_",tau,"-quantile"))
 #'#To load model, run
 #'#model  <- load_model_tf(paste0("model_",tau,"-quantile"),
-#'#custom_objects=list("tilted_loss_tau___tau_"=tilted_loss(tau)))
+#'#custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
 #'
 #' @rdname quant.NN
 #' @export
 
-quant.NN.train=function(Y_train, Y_valid = NULL,X_train, type="MLP",link="identity",tau=NULL,
-                       n.ep=100, batch.size=100,init.q=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL)
+quant.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",link="identity",tau=NULL,
+                       n.ep=100, batch.size=100,init.q=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
+                       S_lambda=NULL)
 {
 
-
-
-
-  if(is.null(X_train)  ) stop("No predictors provided")
-  if(is.null(Y_train)) stop("No training response data provided")
+  
+  if(is.null(X.train)  ) stop("No predictors provided")
+  if(is.null(Y.train)) stop("No training response data provided")
   if(is.null(tau)  ) stop("tau not provided")
 
-  X_train_nn=X_train$X_train_nn
-  X_train_lin=X_train$X_train_lin
-  X_train_add_basis=X_train$X_train_add_basis
+  X.train.nn=X.train$X.train.nn
+  X.train.lin=X.train$X.train.lin
+  X.train.add.basis=X.train$X.train.add.basis
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {  train.data= list(X_train_lin,X_train_add_basis,X_train_nn); print("Defining lin+GAM+NN model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin,add_input_q=X_train_add_basis,  nn_input_q=X_train_nn),Y_valid)}
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) {   train.data= list(X_train_lin,X_train_add_basis); print("Defining lin+GAM model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin,add_input_q=X_train_add_basis),Y_valid)}
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) { train.data= list(X_train_lin,X_train_nn); print("Defining lin+NN model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin, nn_input_q=X_train_nn),Y_valid)}
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) ) {train.data= list(X_train_add_basis,X_train_nn); print("Defining GAM+NN model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(add_input_q=X_train_add_basis,  nn_input_q=X_train_nn),Y_valid)}
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )   {train.data= list(X_train_lin); print("Defining fully-linear model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(lin_input_q=X_train_lin),Y_valid)}
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )   {train.data= list(X_train_add_basis); print("Defining fully-additive model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list(add_input_q=X_train_add_basis),Y_valid)}
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )   {train.data= list(X_train_nn); print("Defining fully-NN model for tau-quantile" );  if(!is.null(Y_valid)) validation.data=list(list( nn_input_q=X_train_nn),Y_valid)}
-
-  if(type=="CNN" & !is.null(X_train_nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
-  if(type=="MLP"  & !is.null(X_train_nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) {  train.data= list(X.train.lin,X.train.add.basis,X.train.nn); print("Defining lin+GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin,add_input_q=X.train.add.basis,  nn_input_q=X.train.nn),Y.valid)}
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) {   train.data= list(X.train.lin,X.train.add.basis); print("Defining lin+GAM model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin,add_input_q=X.train.add.basis),Y.valid)}
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) { train.data= list(X.train.lin,X.train.nn); print("Defining lin+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin, nn_input_q=X.train.nn),Y.valid)}
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) {train.data= list(X.train.add.basis,X.train.nn); print("Defining GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis,  nn_input_q=X.train.nn),Y.valid)}
+  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )   {train.data= list(X.train.lin); print("Defining fully-linear model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin),Y.valid)}
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.add.basis); print("Defining fully-additive model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis),Y.valid)}
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.nn); print("Defining fully-NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.train.nn),Y.valid)}
+  if(is.null(X.train.add.basis)){S_lambda=NULL}
+  if(is.null(S_lambda)){print("No smoothing penalty used")}
+  
+  if(type=="CNN" & !is.null(X.train.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="MLP"  & !is.null(X.train.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
   reticulate::use_virtualenv("myenv", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
 
-  if(is.null(init.q)) init.q=quantile(Y_train[Y_train!=-1e5],prob=tau)
-  model<-quant.NN.build(X_train_nn,X_train_lin,X_train_add_basis, type, init.q, widths,filter.dim,link,tau)
+  if(is.null(init.q)) init.q=quantile(Y.train[Y.train!=-1e5],prob=tau)
+  model<-quant.NN.build(X.train.nn,X.train.lin,X.train.add.basis, type, init.q, widths,filter.dim,link,tau)
+  
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
-
+  
   model %>% compile(
     optimizer="adam",
-    loss = tilted_loss(tau=tau),
+    loss = tilted.loss(tau=tau,S_lambda=S_lambda),
     run_eagerly=T
   )
 
-  if(!is.null(Y_valid)) checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
+  if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
 
-  if(!is.null(Y_valid)){
+  if(!is.null(Y.valid)){
     history <- model %>% fit(
-      train.data, Y_train,
+      train.data, Y.train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint),
       validation_data=validation.data
@@ -211,7 +233,7 @@ quant.NN.train=function(Y_train, Y_valid = NULL,X_train, type="MLP",link="identi
   }else{
 
     history <- model %>% fit(
-      train.data, Y_train,
+      train.data, Y.train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint)
     )
@@ -226,52 +248,52 @@ quant.NN.train=function(Y_train, Y_valid = NULL,X_train, type="MLP",link="identi
 #' @rdname quant.NN
 #' @export
 #'
-quant.NN.predict=function(X_train, model)
+quant.NN.predict=function(X.train, model)
 {
 
 
 
-  if(is.null(X_train)  ) stop("No predictors provided")
+  if(is.null(X.train)  ) stop("No predictors provided")
 
-  X_train_nn=X_train$X_train_nn
-  X_train_lin=X_train$X_train_lin
-  X_train_add_basis=X_train$X_train_add_basis
+  X.train.nn=X.train$X.train.nn
+  X.train.lin=X.train$X.train.lin
+  X.train.add.basis=X.train$X.train.add.basis
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) predictions<-model %>% predict(  list(X_train_lin,X_train_add_basis,X_train_nn))
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )    predictions<-model %>% predict( list(X_train_lin,X_train_add_basis))
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) predictions<-model %>% predict( list(X_train_lin,X_train_nn))
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) ) predictions<-model %>% predict( list(X_train_add_basis,X_train_nn))
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  predictions<-model %>% predict(list(X_train_lin))
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )   predictions<-model %>% predict( list(X_train_add_basis))
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )   predictions<-model %>% predict( list(X_train_nn))
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) predictions<-model %>% predict(  list(X.train.lin,X.train.add.basis,X.train.nn))
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )    predictions<-model %>% predict( list(X.train.lin,X.train.add.basis))
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) predictions<-model %>% predict( list(X.train.lin,X.train.nn))
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) predictions<-model %>% predict( list(X.train.add.basis,X.train.nn))
+  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  predictions<-model %>% predict(list(X.train.lin))
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   predictions<-model %>% predict( list(X.train.add.basis))
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   predictions<-model %>% predict( list(X.train.nn))
 
-  if(!is.null(X_train_add_basis))  gam.weights<-matrix(t(model$get_layer("add_q")$get_weights()[[1]]),nrow=dim(X_train_add_basis)[length(dim(X_train_add_basis))-1],ncol=dim(X_train_add_basis)[length(dim(X_train_add_basis))],byrow=T)
+  if(!is.null(X.train.add.basis))  gam.weights<-matrix(t(model$get_layer("add_q")$get_weights()[[1]]),nrow=dim(X.train.add.basis)[length(dim(X.train.add.basis))-1],ncol=dim(X.train.add.basis)[length(dim(X.train.add.basis))],byrow=T)
 
-  if(!is.null(X_train_add_basis) & !is.null(X_train_lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]]),"gam.weights"=gam.weights))
-  if(is.null(X_train_add_basis) & !is.null(X_train_lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]])))
-  if(!is.null(X_train_add_basis) & is.null(X_train_lin)) return(list("predictions"=predictions,"gam.weights"=gam.weights))
-  if(is.null(X_train_add_basis) & is.null(X_train_lin)) return(list("predictions"=predictions))
+  if(!is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]]),"gam.weights"=gam.weights))
+  if(is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]])))
+  if(!is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("predictions"=predictions,"gam.weights"=gam.weights))
+  if(is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("predictions"=predictions))
 
 
 }
 #'
 #'
-quant.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.q, widths,filter.dim,link,tau=tau)
+quant.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.q, widths,filter.dim,link,tau=tau)
 {
   #Additive input
-  if(!is.null(X_train_add_basis))  input_add<- layer_input(shape = dim(X_train_add_basis)[-1], name = 'add_input_q')
+  if(!is.null(X.train.add.basis))  input_add<- layer_input(shape = dim(X.train.add.basis)[-1], name = 'add_input_q')
 
   #NN input
 
-  if(!is.null(X_train_nn))   input_nn <- layer_input(shape = dim(X_train_nn)[-1], name = 'nn_input_q')
+  if(!is.null(X.train.nn))   input_nn <- layer_input(shape = dim(X.train.nn)[-1], name = 'nn_input_q')
 
   #Linear input
 
-  if(!is.null(X_train_lin)) input_lin <- layer_input(shape = dim(X_train_lin)[-1], name = 'lin_input_q')
+  if(!is.null(X.train.lin)) input_lin <- layer_input(shape = dim(X.train.lin)[-1], name = 'lin_input_q')
 
   if(link=="exp") init.q=log(init.q) else if(link =="identity") init.q=init.q else stop("Invalid link function")
   #NN tower
-  if(!is.null(X_train_nn)){
+  if(!is.null(X.train.nn)){
 
     nunits=c(widths,1)
     n.layers=length(nunits)-1
@@ -280,12 +302,12 @@ quant.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.q, 
     if(type=="MLP"){
       for(i in 1:n.layers){
         nnBranchq <- nnBranchq  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                                input_shape =dim(X_train_nn)[-1], name = paste0('nn_q_dense',i) )
+                                                input_shape =dim(X.train.nn)[-1], name = paste0('nn_q_dense',i) )
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                  input_shape =dim(X_train_nn)[-1], name = paste0('nn_q_cnn',i) )
+                                                  input_shape =dim(X.train.nn)[-1], name = paste0('nn_q_cnn',i) )
       }
 
     }
@@ -296,63 +318,63 @@ quant.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.q, 
   }
 
   #Additive tower
-  n.dim.add=length(dim(X_train_add_basis))
-  if(!is.null(X_train_add_basis) & !is.null(X_train_add_basis) ) {
+  n.dim.add=length(dim(X.train.add.basis))
+  if(!is.null(X.train.add.basis) & !is.null(X.train.add.basis) ) {
 
     addBranchq <- input_add %>%
-      layer_reshape(target_shape=c(dim(X_train_add_basis)[2:(n.dim.add-2)],prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]))) %>%
+      layer_reshape(target_shape=c(dim(X.train.add.basis)[2:(n.dim.add-2)],prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_q',
-                  weights=list(matrix(0,nrow=prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]),ncol=1)),use_bias = F)
+                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1)),use_bias = F)
   }
-  if(!is.null(X_train_add_basis) & is.null(X_train_add_basis) ) {
+  if(!is.null(X.train.add.basis) & is.null(X.train.add.basis) ) {
 
     addBranchq <- input_add %>%
-      layer_reshape(target_shape=c(dim(X_train_add_basis)[2:(n.dim.add-2)],prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]))) %>%
+      layer_reshape(target_shape=c(dim(X.train.add.basis)[2:(n.dim.add-2)],prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_q',
-                  weights=list(matrix(0,nrow=prod(dim(X_train_add_basis)[(n.dim.add-1):n.dim.add]),ncol=1),array(init.q)),use_bias = T)
+                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1),array(init.q)),use_bias = T)
   }
 
   #Linear tower
 
 
-  if(!is.null(X_train_lin) ) {
-    n.dim.lin=length(dim(X_train_lin))
+  if(!is.null(X.train.lin) ) {
+    n.dim.lin=length(dim(X.train.lin))
 
-    if(is.null(X_train_nn) & is.null(X_train_add_basis )){
+    if(is.null(X.train.nn) & is.null(X.train.add.basis )){
       linBranchq <- input_lin%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X_train_lin)[-1], name = 'lin_q',
-                    weights=list(matrix(0,nrow=dim(X_train_lin)[n.dim.lin],ncol=1),array(init.q)),use_bias=T)
+                    input_shape =dim(X.train.lin)[-1], name = 'lin_q',
+                    weights=list(matrix(0,nrow=dim(X.train.lin)[n.dim.lin],ncol=1),array(init.q)),use_bias=T)
     }else{
       linBranchq <- input_lin%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X_train_lin)[-1], name = 'lin_q',
-                    weights=list(matrix(0,nrow=dim(X_train_lin)[n.dim.lin],ncol=1)),use_bias=F)
+                    input_shape =dim(X.train.lin)[-1], name = 'lin_q',
+                    weights=list(matrix(0,nrow=dim(X.train.lin)[n.dim.lin],ncol=1)),use_bias=F)
     }
   }
 
 
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add NN+lin towers
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add NN+GAM towers
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  qBranchjoined <- linBranchq  #Just lin tower
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  qBranchjoined <- addBranchq  #Just GAM tower
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )  qBranchjoined <- nnBranchq  #Just NN tower
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add NN+lin towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add NN+GAM towers
+  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- linBranchq  #Just lin tower
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- addBranchq  #Just GAM tower
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- nnBranchq  #Just NN tower
 
 
   #Apply link functions
   if(link=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential') else if(link=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity')
 
 
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & !is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X_train_nn) & is.null(X_train_add_basis) & !is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_lin),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X_train_nn) & !is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_add),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X_train_nn) & is.null(X_train_add_basis) & is.null(X_train_lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),    outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_lin),    outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_add),    outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
 
   print(model)
 
@@ -362,8 +384,9 @@ quant.NN.build=function(X_train_nn,X_train_lin,X_train_add_basis, type, init.q, 
 
 
 
-tilted_loss <- function( tau) {
+tilted.loss <- function( tau,S_lambda=NULL) {
 
+  if(is.null(S_lambda)){
   loss <- function( y_true, y_pred) {
   K <- backend()
 
@@ -373,6 +396,24 @@ tilted_loss <- function( tau) {
 
   error = y_true - y_pred
   return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds))
+  }
+  }else{
+    loss <- function( y_true, y_pred) {
+      K <- backend()
+      
+      t.gam.weights=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
+      gam.weights=K$constant(model$get_layer("add_q")$get_weights()[[1]])
+      S_lambda.tensor=K$constant(S_lambda)
+      
+      penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
+      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+1e4))
+      
+      error = y_true - y_pred
+      return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds)+penalty)
+    }
+    
   }
   return(loss)
 }

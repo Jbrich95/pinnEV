@@ -6,38 +6,39 @@
 \alias{logistic.NN.predict}
 \title{Logistic regression PINN}
 \usage{
-logistic.NN.train(Y_train, Y_valid = NULL, X_train, type = "MLP",
+logistic.NN.train(Y.train, Y.valid = NULL, X.train, type = "MLP",
   n.ep = 100, batch.size = 100, init.p = NULL, widths = c(6, 3),
-  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL)
+  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
+  S_lambda = NULL)
 
-logistic.NN.predict(X_train, model)
+logistic.NN.predict(X.train, model)
 }
 \arguments{
-\item{Y_train, Y_valid}{a 2 or 3 dimensional array of training or validation response values, with entries of 0/1 for failure/success.
-Missing values can be handled by setting corresponding entries to \code{Y_train} or \code{Y_valid} to \code{-1e5}.
+\item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation response values, with entries of 0/1 for failure/success.
+Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e5}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y_train} and \code{Y_valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
-If \code{Y_valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
+If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X_train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
-\item{\code{X_train_lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y_train}. If \code{NULL}, a model without the linear component is built and trained.
-The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
-\item{\code{X_train_add_basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
-The first 2/3 dimensions should be equal to that of \code{Y_train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
+\item{X.train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
+\item{\code{X.train.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
+\item{\code{X.train.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 If \code{NULL}, a model without the additive component is built and trained.}
-\item{\code{X_train_nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
-The first 2/3 dimensions should be equal to that of \code{Y_train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
+\item{\code{X.train.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
+The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_valid}.}
+Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
-\item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y_train)[1]}, i.e., the number of observations, then regular gradient descent used.}
+\item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
 
-\item{init.p}{sets the initial probability estimate across all dimensions of \code{Y_train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.}
+\item{init.p}{sets the initial probability estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.}
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
@@ -49,7 +50,8 @@ Note that \code{X_train} is the predictors for both \code{Y_train} and \code{Y_v
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial probability estimate is \code{init.p} across all dimensions.}
 
-\item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.}
+\item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -66,9 +68,9 @@ We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
 \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively,
 and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is estimated using a neural network.
 
-The model is fitted by minimising the binary cross-entropy loss over \code{n.ep} training epochs.
-Although the model is trained by minimising the loss evaluated for \code{Y_train}, the final returned model may minimise some other loss.
-The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y_valid} if \code{!is.null(Y_valid)} and for \code{Y_train}, otherwise.
+The model is fitted by minimising the binary cross-entropy loss plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) over \code{n.ep} training epochs.
+Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
+The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
 }
 }
@@ -79,26 +81,26 @@ The current state of the model is saved after each epoch, using \code{keras::cal
 # Build and train a simple MLP for toy data
 
 # Create 'nn', 'additive' and 'linear' predictors
-X_train_nn<-rnorm(5000); X_train_add<-rnorm(2000); X_train_lin<-rnorm(3000)
+X.train.nn<-rnorm(5000); X.train.add<-rnorm(2000); X.train.lin<-rnorm(3000)
 
 #Re-shape to a 4d array. First dimension corresponds to observations,
 #last to the different components of the predictor set
-dim(X_train_nn)=c(10,10,10,5) #Five nn predictors
-dim(X_train_lin)=c(10,10,10,3) #Three linear predictors
-dim(X_train_add)=c(10,10,10,2) #Two additive predictors
+dim(X.train.nn)=c(10,10,10,5) #Five nn predictors
+dim(X.train.lin)=c(10,10,10,3) #Three linear predictors
+dim(X.train.add)=c(10,10,10,2) #Two additive predictors
 
 # Create toy response data
 
 #Linear contribution
-m_L = 0.3*X_train_lin[,,,1]+0.6*X_train_lin[,,,2]-0.2*X_train_lin[,,,3]
+m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
 
 # Additive contribution
-m_A = 0.1*X_train_add[,,,1]^2+0.2*X_train_add[,,,1]-0.1*X_train_add[,,,2]^3+
-0.5*X_train_add[,,,2]^2
+m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^3+
+0.5*X.train.add[,,,2]^2
 
 #Non-additive contribution - to be estimated by NN
-m_N = exp(-3+X_train_nn[,,,2]+X_train_nn[,,,3])+
-sin(X_train_nn[,,,1]-X_train_nn[,,,2])*(X_train_nn[,,,4]+X_train_nn[,,,5])
+m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
+sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,4]+X.train.nn[,,,5])
 
 p=0.5+0.5*tanh((m_L+m_A+m_N)/2) #Logistic link
 Y=apply(p,1:3,function(x) rbinom(1,1,x))
@@ -109,14 +111,14 @@ Y=apply(p,1:3,function(x) rbinom(1,1,x))
 
 mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 
-Y_train<-Y_valid<-Y #Create training and validation, respectively.
-Y_train[-mask_inds]=-1e5
-Y_valid[mask_inds]=-1e5
+Y.train<-Y.valid<-Y #Create training and validation, respectively.
+Y.train[-mask_inds]=-1e5
+Y.valid[mask_inds]=-1e5
 
 
 
 #To build a model with an additive component, we require an array of evaluations of
-#the basis functions for each pre-specified knot and entry to X_train_add
+#the basis functions for each pre-specified knot and entry to X.train.add
 
 rad=function(x,c){ #Define a basis function. Here we use the radial bases
   out=abs(x-c)^2*log(abs(x-c))
@@ -125,31 +127,46 @@ rad=function(x,c){ #Define a basis function. Here we use the radial bases
 }
 
 n.knot = 5 # set number of knots. Must be the same for each additive predictor
-knots=matrix(nrow=dim(X_train_add)[4],ncol=n.knot)
+knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
 
 #We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X_train_add)[4]) {
-knots[i,]=quantile(X_train_add[,,,i],probs=seq(0,1,length=n.knot))}
+for( i in 1:dim(X.train.add)[4]) {
+knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))}
 
-X_train_add_basis<-array(dim=c(dim(X_train_add),n.knot))
-for( i in 1:dim(X_train_add)[4]) {
+X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
+for( i in 1:dim(X.train.add)[4]) {
 for(k in 1:n.knot) {
-X_train_add_basis[,,,i,k]= rad(x=X_train_add[,,,i],c=knots[i,k])
-#Evaluate rad at all entries to X_train_add and for all knots
+X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
+#Evaluate rad at all entries to X.train.add and for all knots
 }}
 
-X_train=list("X_train_nn"=X_train_nn, "X_train_lin"=X_train_lin,
-"X_train_add_basis"=X_train_add_basis)
+ #Penalty matrix for additive functions
+
+# Set smoothness parameters for first and second addictive functions
+ lambda = c(0.5,1) 
+ 
+S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
+for(i in 1:dim(X.train.add)[4]){
+ for(j in 1:n.knot){
+  for(k in 1:n.knot){
+     S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
+  }
+}
+}
+
+X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
+"X.train.add.basis"=X.train.add.basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-logistic.NN.train(Y_train, Y_valid,X_train,  type="MLP",n.ep=2000,
-                      batch.size=50,init.p=0.4, widths=c(6,3))
+model<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
+                      batch.size=50,init.p=0.4, widths=c(6,3),
+                      S_lambda=S_lambda)
 
-out<-predict_bernoulli_nn(X_train,model)
+out<-predict_bernoulli_nn(X.train,model)
 hist(out$predictions) #Plot histogram of predicted probability
 print(out$lin.coeff)
 
-n.add.preds=dim(X_train_add)[length(dim(X_train_add))]
+n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
 par(mfrow=c(1,n.add.preds))
 for(i in 1:n.add.preds){
  plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis
@@ -166,6 +183,6 @@ for(i in 1:n.add.preds){
 
 #To save model, run model \%>\% save_model_tf("model_Bernoulli")
 #To load model, run model  <- load_model_tf("model_Bernoulli",
-#custom_objects=list("bce_loss"=bce_loss))
+#custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
 
 }

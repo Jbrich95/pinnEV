@@ -57,6 +57,8 @@
 #'@references
 #' Coles, S. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}, Springer Series in Statistics.
 #' (\href{https://doi.org/10.1007%2F978-1-4471-3675-0}{doi})
+#' 
+#'  Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
 #'
 #' @examples
 #'

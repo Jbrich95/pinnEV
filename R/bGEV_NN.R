@@ -63,6 +63,8 @@
 #' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
 #' (\href{https://doi.org/10.1002/env.2742}{doi})
 #'
+#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+#'
 #' @examples
 #'
 #' # Build and train a simple MLP for toy data
