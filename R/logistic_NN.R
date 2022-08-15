@@ -33,7 +33,7 @@
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{logistic.NN.train}.
-#' #' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
 
 
 #' @details{
@@ -120,7 +120,7 @@
 #' 
 #'  #Penalty matrix for additive functions
 #' 
-#'# Set smoothness parameters for first and second addictive functions
+#'# Set smoothness parameters for first and second additive functions
 #'  lambda = c(0.5,1) 
 #'  
 #'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
@@ -189,9 +189,10 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
   if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.add.basis); print("Defining fully-additive model for p" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_p=X.train.add.basis),Y.valid)}
   if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.nn); print("Defining fully-NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_p=X.train.nn),Y.valid)}
 
+  if(is.null(S_lambda) & !is.null(X.train.add.basis)){print("No smoothing penalty used")}
+
   if(is.null(X.train.add.basis)){S_lambda=NULL}
-  if(is.null(S_lambda)){print("No smoothing penalty used")}
-  
+
   if(type=="CNN" & !is.null(X.train.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & !is.null(X.train.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 

@@ -56,7 +56,7 @@ final layer has zero initial weights to ensure that the initial quantile estimat
 
 \item{model}{fitted \code{keras} model. Output from \code{quant.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -137,7 +137,9 @@ n.knot = 5 # set number of knots. Must be the same for each additive predictor
 knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
 
 #We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X.train.add)[4]) knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
+for( i in 1:dim(X.train.add)[4]){
+ knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
+ }
 
 X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
 for( i in 1:dim(X.train.add)[4]) {
@@ -149,7 +151,7 @@ X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
 
 #Penalty matrix for additive functions
 
-# Set smoothness parameters for first and second addictive functions
+# Set smoothness parameters for first and second additive functions
  lambda = c(0.5,1) 
  
 S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])

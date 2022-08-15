@@ -34,7 +34,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param link string defining the link function used, see \eqn{h} below. If \code{link=="exp"}, then \eqn{h=\exp(x)}; if \code{link=="identity"}, then \eqn{h(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{quant.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
 
 #' @details{
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
@@ -114,7 +114,9 @@
 #' knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
 #'
 #' #We set knots to be equally-spaced marginal quantiles
-#' for( i in 1:dim(X.train.add)[4]) knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
+#' for( i in 1:dim(X.train.add)[4]){
+#'  knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
+#'  }
 #'
 #' X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
 #' for( i in 1:dim(X.train.add)[4]) {
@@ -126,7 +128,7 @@
 #' 
 #' #Penalty matrix for additive functions
 #' 
-#'# Set smoothness parameters for first and second addictive functions
+#'# Set smoothness parameters for first and second additive functions
 #'  lambda = c(0.5,1) 
 #'  
 #'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
@@ -197,10 +199,12 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",link="identi
   if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) {train.data= list(X.train.add.basis,X.train.nn); print("Defining GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis,  nn_input_q=X.train.nn),Y.valid)}
   if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )   {train.data= list(X.train.lin); print("Defining fully-linear model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin),Y.valid)}
   if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.add.basis); print("Defining fully-additive model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis),Y.valid)}
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.nn); print("Defining fully-NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.train.nn),Y.valid)}
-  if(is.null(X.train.add.basis)){S_lambda=NULL}
-  if(is.null(S_lambda)){print("No smoothing penalty used")}
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.nn); print("Defining fully-NN model for tau-quantile" ) ; if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.train.nn),Y.valid)}
   
+  if(is.null(S_lambda) & !is.null(X.train.add.basis)){print("No smoothing penalty used")}
+
+  if(is.null(X.train.add.basis)){S_lambda=NULL}
+
   if(type=="CNN" & !is.null(X.train.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & !is.null(X.train.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 

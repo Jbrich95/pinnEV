@@ -50,8 +50,9 @@ Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.v
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial probability estimate is \code{init.p} across all dimensions.}
 
-\item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.}
+
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -142,7 +143,7 @@ X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
 
  #Penalty matrix for additive functions
 
-# Set smoothness parameters for first and second addictive functions
+# Set smoothness parameters for first and second additive functions
  lambda = c(0.5,1) 
  
 S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
