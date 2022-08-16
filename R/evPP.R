@@ -63,11 +63,9 @@
 #'
 
 #'
-#'@references Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer.
-#' (\href{https://doi.org/10.1007%2F978-1-4471-3675-0}{doi})
+#'@references Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/978-1-4471-3675-0}{doi})
 #'
-#' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
-#' (\href{https://doi.org/10.1002/env.2742}{doi})
+#' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.  (\href{https://doi.org/10.1002/env.2742}{doi})
 
 
 

@@ -187,3 +187,8 @@ for(i in 1:n.add.preds){
 #custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
 
 }
+\references{
+{
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+}
+}

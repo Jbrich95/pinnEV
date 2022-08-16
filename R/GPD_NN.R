@@ -1,6 +1,6 @@
 #'GPD PINN
 #'
-#' Build and train a partially-interpretable neural network for fitting a GPD model
+#' Build and train a partially-interpretable neural network for fitting a GPD model to threshold exceedances 
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
@@ -55,12 +55,11 @@
 #'}
 #' @return \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
 #'
-#'@references
-#' Coles, S. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}, Springer Series in Statistics.
-#' (\href{https://doi.org/10.1007%2F978-1-4471-3675-0}{doi})
+#'@references{
+#' Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/F978-1-4471-3675-0}{doi})
 #' 
-#'  Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
-#'
+#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+#'}
 #' @examples
 #'
 #'#Apply model to toy data
