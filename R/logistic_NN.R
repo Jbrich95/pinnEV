@@ -166,6 +166,8 @@
 #'#To load model, run model  <- load_model_tf("model_Bernoulli",
 #'#custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
 #'
+#' @import reticulate tensorflow keras
+#'
 #' @rdname logistic.NN
 #' @export
 
@@ -215,7 +217,8 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
 
   if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_bernoulli_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bernoulli_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
-
+  .GlobalEnv$model <- model
+  
   if(!is.null(Y.valid)){
     history <- model %>% fit(
       train.data, Y.train,
@@ -347,10 +350,10 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
 
 
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp))  #Add all towers
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp))  #Add GAM+lin towers
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp))  #Add NN+lin towers
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp))  #Add NN+GAM towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp),name="Combine_p_components")  #Add all towers
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp),name="Combine_p_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp),name="Combine_p_components")  #Add NN+lin towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp),name="Combine_p_components")  #Add NN+GAM towers
   if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- linBranchp  #Just lin tower
   if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- addBranchp  #Just GAM tower
   if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- nnBranchp  #Just NN tower
@@ -358,7 +361,7 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
 
   #Apply link functions
   pBranchjoined <- pBranchjoined %>%
-    layer_activation( activation = 'sigmoid')
+    layer_activation( activation = 'sigmoid', name = "p_activation")
 
 
   if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )

@@ -11,3 +11,4 @@ Depends: R (>= 3.4)
 Imports: reticulate, keras, tfprobability, stats, evd
 RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE, old_usage = TRUE)
+

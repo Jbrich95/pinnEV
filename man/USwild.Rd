@@ -70,7 +70,7 @@ data(USwild)
 Richards, J. and Huser, R. (2022), \emph{High-dimensional extreme quantile regression using
 partially-interpretable neural networks: With application to U.S. wildfires.}
 
-Short, K. C. (2017), \emph{Spatial wildfire occurrence data for the United States, 1992-2015 \link[=FPA\\_FOD\\_20170508]{FPA\_FOD\_20170508}.
+Short, K. C. (2017), \emph{Spatial wildfire occurrence data for the United States, 1992-2015 \link{FPA_FOD_20170508}.
 4th Ed. Fort Collins, CO: Forest Service Research Data Archive.}
 
 Opitz, T.. (2022), \emph{Editorial: EVA 2021 Data Competition on spatio-temporal prediction of wildfire activity in the United States.} Extremes, to appear.

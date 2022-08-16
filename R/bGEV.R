@@ -17,8 +17,8 @@
 #'
 #' @details{
 #' The GEV distribution function for real location \eqn{\mu} and scale \eqn{\sigma>0} is
-#'\deqn{G(y|\mu,\sigma,\xi)=\exp[-1\{1+\xi(y-\mu)/\sigma\}_+^{-1/\xi}]} for \eqn{\xi>0} and
-#'  \deqn{G(y|\mu,\sigma,\xi)=\exp\{-\exp(-(y-\mu)/\sigma)\}} for \eqn{\xi=0}, where \eqn{\{x\}_+=\max\{0,x\}}. It can be re-parametrised in terms of
+#'\deqn{G(y|\mu,\sigma,\xi)=\exp[-\{1+\xi(y-\mu)/\sigma\}_+^{-1/\xi}]} for \eqn{\xi>0} and
+#'  \deqn{G(y|\mu,\sigma,\xi)=\exp\{-\exp(-(y-\mu)/\sigma)\}} for \eqn{\xi=0}, where \eqn{\{x\}_+=\max\{0,x\}}. It can be re-parameterised in terms of
 #'  a location parameter \eqn{q_\alpha} for \eqn{\alpha\in(0,1)}, denoting the GEV \eqn{\alpha}-quantile, and a spread
 #'  parameter \eqn{s_\beta=q_{1-\beta/2}-q_{\beta/2}} for \eqn{\beta\in(0,1)}. This
 #'is achieved using the following one-to-one mapping; if \eqn{\xi>0}, then
@@ -87,6 +87,8 @@ if(log == F){
 return(out)
 }
 
+ #'@import stats
+ 
  #' @rdname bGEV
  #' @export
  #'

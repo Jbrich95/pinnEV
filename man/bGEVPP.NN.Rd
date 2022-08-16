@@ -32,9 +32,9 @@ If \code{NULL}, a model without the additive component is built and trained.}
 \item{\code{X.train.nn.q}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}.}
+Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.}
 
-\item{X.train.s}{similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that both \eqn{q_\beta} and \eqn{s_\beta} must be modelled as non-stationary in the current version.}
+\item{X.train.s}{similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{u.train}{an array with the same dimension as \code{Y.train}. Gives the threshold above which the bGEV-PP model is fitted, see below. Note that \code{u.train} is applied to both \code{Y.train} and \code{Y.valid}.}
 

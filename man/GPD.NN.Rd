@@ -223,7 +223,6 @@ for(i in 1:n.add.preds){
   #Adds red triangles that denote knot locations
   
 }
-
 }
 \references{
 {

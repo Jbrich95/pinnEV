@@ -22,8 +22,8 @@
 #' \item{\code{X.train.nn.q}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}.
-#' @param X.train.s similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that both \eqn{q_\beta} and \eqn{s_\beta} must be modelled as non-stationary in the current version.
+#' Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.
+#' @param X.train.s similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param alpha,beta,p_a,p_b,c1,c2 hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
@@ -294,6 +294,8 @@
 #'
 #' }
 #'
+#' @import reticulate tfprobability keras tensorflow
+#'
 #' @rdname bGEVPP.NN
 #' @export
 
@@ -307,8 +309,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
 
 
 
-  if(is.null(X.train.q)  ) stop("No predictors provided for q_\alpha")
-  if(is.null(X.train.s)  ) stop("No predictors provided for s_\beta")
+  if(is.null(X.train.q) &  is.null(X.train.s)  ) stop("No predictors provided for q_alpha or s_beta: Stationary models are not permitted ")
   if(is.null(Y.train)) stop("No training response data provided")
   if(is.null(u.train)) stop("No threshold u.train provided")
 
@@ -330,7 +331,8 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )   {train.data= list(X.train.lin.q); print("Defining fully-linear model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin.q),Y.valid)}
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(X.train.add.basis.q); print("Defining fully-additive model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis.q),Y.valid)}
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(X.train.nn.q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.train.nn.q),Y.valid)}
-
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(); print("Defining stationary model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
+  
   S_lambda.q=S_lambda$S_lambda.q
   if(is.null(S_lambda.q)){print("No smoothing penalty used for q_\alpha")}
   if(is.null(X.train.add.basis.q)){S_lambda.q=NULL}
@@ -346,7 +348,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.lin.s,u.train)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.s,u_input=u.train)),Y.valid)}
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.add.basis.s,u.train)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.train.add.basis.s,u_input=u.train)),Y.valid)}
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.nn.s,u.train)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.train.nn.s,u_input=u.train)),Y.valid)}
-  
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data=  c(train.data,list(u.train)); print("Defining stationary model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(u_input=u.train)),Y.valid)}
 
   S_lambda.s=S_lambda$S_lambda.s
   if(is.null(S_lambda.s)){print("No smoothing penalty used for s_\beta")}
@@ -376,7 +378,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
 
   if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEVPP_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
-
+  .GlobalEnv$model <- model
   if(!is.null(Y.valid)){
     history <- model %>% fit(
       train.data, Y.train,
@@ -406,9 +408,8 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
 bGEVPP.NN.predict=function(X.train.q,X.train.s,u.train, model)
 {
     library(tensorflow)
-  if(is.null(X.train.q)  ) stop("No predictors provided for q_\alpha")
-  if(is.null(X.train.s)  ) stop("No predictors provided for s_\beta")
-
+  if(is.null(X.train.q) &  is.null(X.train.s)  ) stop("No predictors provided for q_alpha or s_beta: Stationary models are not permitted ")
+  
 
 
   X.train.nn.q=X.train.q$X.train.nn.q
@@ -423,7 +424,8 @@ bGEVPP.NN.predict=function(X.train.q,X.train.s,u.train, model)
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )   train.data= list(X.train.lin.q)
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list(X.train.add.basis.q)
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list(X.train.nn.q)
-
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list()
+  
   X.train.nn.s=X.train.s$X.train.nn.s
   X.train.lin.s=X.train.s$X.train.lin.s
   X.train.add.basis.s=X.train.s$X.train.add.basis.s
@@ -435,7 +437,7 @@ bGEVPP.NN.predict=function(X.train.q,X.train.s,u.train, model)
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )   train.data= c(train.data,list(X.train.lin.s,u.train))
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   train.data= c(train.data,list(X.train.add.basis.s,u.train))
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) ) train.data= c(train.data,list(X.train.nn.s,u.train))
-
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) ) train.data= c(train.data,list(u.train))
 
     predictions<-model %>% predict( train.data)
     predictions <- k_constant(predictions)
@@ -483,7 +485,7 @@ bGEVPP.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
 
 
   xiBranch <- input_u %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(u.train)[-1], trainable=F,
-                                       weights=list(matrix(0,nrow=dim(u.train)[length(dim(u.train))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                       weights=list(matrix(0,nrow=dim(u.train)[length(dim(u.train))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
     layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
 
 
@@ -609,27 +611,56 @@ bGEVPP.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     }
   }
 
+  
+  #Stationary towers
+  
   #Location
-  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
-  if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
-  if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add nn+lin towers
-  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add nn+GAM towers
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q)) {
+  
+      statBranchq <- input_u %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(u.train)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(u.train)[length(dim(u.train))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
+   
+    
+  }
+  
+  #Spread
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s)) {
+    
+    
+      statBranchs <- input_u %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(u.train)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(u.train)[length(dim(u.train))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.spread),nrow=1,ncol=1)), name = 's_stationary_dense2')
+   
+    
+  }
+  
+  #Combine towers
+  
+  
+  #Location
+  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq),name="Combine_q_components")  #Add all towers
+  if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq),name="Combine_q_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq),name="Combine_q_components")  #Add nn+lin towers
+  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq),name="Combine_q_components")  #Add nn+GAM towers
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- nnBranchq  #Just nn tower
-
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- statBranchq  #Just stationary tower
+  
   #Spread
-  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs))  #Add all towers
-  if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs))  #Add GAM+lin towers
-  if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs))  #Add nn+lin towers
-  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs))  #Add nn+GAM towers
+  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs),name="Combine_s_components")  #Add all towers
+  if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs),name="Combine_s_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs),name="Combine_s_components")  #Add nn+lin towers
+  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs),name="Combine_s_components")  #Add nn+GAM towers
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- linBranchs  #Just lin tower
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- addBranchs  #Just GAM tower
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- nnBranchs  #Just nn tower
-
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- statBranchs  #Just stationary tower
+  
   #Apply link functions
-  if(link.loc=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential') else if(link.loc=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity')
-  sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential')
+  if(link.loc=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential', name = "q_activation") else if(link.loc=="identity") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'linear', name = "q_activation")
+  sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential', name = "s_activation")
 
   input=c()
   if(!is.null(X.train.lin.q) ) input=c(input,input_lin_q)
@@ -641,7 +672,7 @@ bGEVPP.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
   input=c(input,input_u)
 
 
-  output <- layer_concatenate(c(input_u,qBranchjoined,sBranchjoined, xiBranch))
+  output <- layer_concatenate(c(input_u,qBranchjoined,sBranchjoined, xiBranch),name="Combine_parameter_tensors")
 
   model <- keras_model(  inputs = input,   outputs = output,name=paste0("bGEV-PP"))
   print(model)
@@ -952,3 +983,4 @@ loss<- function( y_true, y_pred) {
 return(loss)
 
 }
+

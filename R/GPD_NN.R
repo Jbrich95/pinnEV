@@ -201,7 +201,8 @@
 #'   #Adds red triangles that denote knot locations
 #'   
 #' }
-
+#' @import reticulate keras tensorflow
+#' @importFrom evd rgpd
 #'
 #' @rdname GPD.NN
 #' @export
@@ -258,7 +259,7 @@
   
   if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_GPD_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_GPD_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
   
-  
+  .GlobalEnv$model <- model
   if(!is.null(Y.valid)){
     history <- model %>% fit(
       train.data, Y.train,
@@ -416,16 +417,16 @@ GPD.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis,
   
  
   #Scale
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma,nnBranchsigma))  #Add all towers
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma))  #Add GAM+lin towers
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(  linBranchsigma,nnBranchsigma))  #Add nn+lin towers
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  nnBranchsigma))  #Add nn+GAM towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma,nnBranchsigma),name="Combine_sigma_components")  #Add all towers
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma),name="Combine_sigma_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(  linBranchsigma,nnBranchsigma),name="Combine_sigma_components")  #Add nn+lin towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  nnBranchsigma),name="Combine_sigma_components")  #Add nn+GAM towers
   if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  sigmaBranchjoined <- linBranchsigma  #Just lin tower
   if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  sigmaBranchjoined <- addBranchsigma  #Just GAM tower
   if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  sigmaBranchjoined <- nnBranchsigma  #Just nn tower
   
   #Apply link functions
-  sigmaBranchjoined <- sigmaBranchjoined %>% layer_activation( activation = 'exponential')
+  sigmaBranchjoined <- sigmaBranchjoined %>% layer_activation( activation = 'exponential', name = "sigma_activation")
   
   input=c()
 
@@ -435,7 +436,7 @@ GPD.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis,
   input=c(input,input_u)
   
   
-  output <- layer_concatenate(c(input_u,sigmaBranchjoined, xiBranch))
+  output <- layer_concatenate(c(input_u,sigmaBranchjoined, xiBranch),name="Combine_parameter_tensors")
   
   model <- keras_model(  inputs = input,   outputs = output,name=paste0("GPD"))
   print(model)

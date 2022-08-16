@@ -16,7 +16,8 @@
 #'@param n number of replications.
 #'
 #'@name evPP
-
+#'
+#'@import stats
 #'@details
 #'Following Coles (2001), consider a sequence of independent random variables \eqn{Y_1,\dots,Y_n} with common distribution function \eqn{F}. For \eqn{n_b}-block-maxima \eqn{M_{n_b}=\max\{Y_1,\dots,Y_{n_b}\}};
 #'if there exists sequences \eqn{\{a_{n} >0\}} and \eqn{\{b_{n}\}} such that

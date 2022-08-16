@@ -21,8 +21,8 @@
 #' \item{\code{X.train.nn.q}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}.
-#' @param X.train.s similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that both \eqn{q_\beta} and \eqn{s_\beta} must be modelled as non-stationary in this version.
+#' Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.
+#' @param X.train.s similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param alpha,beta,p_a,p_b hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
@@ -277,6 +277,7 @@
 #'
 #' }
 #'
+#' @import reticulate tfprobability keras tensorflow 
 #' @rdname bGEV.NN
 #' @export
 
@@ -289,8 +290,7 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
   
   
   
-  if(is.null(X.train.q)  ) stop("No predictors provided for q_\alpha")
-  if(is.null(X.train.s)  ) stop("No predictors provided for s_\beta")
+  if(is.null(X.train.q) &  is.null(X.train.s)  ) stop("No predictors provided for q_alpha or s_beta: Stationary models are not permitted ")
   if(is.null(Y.train)) stop("No training response data provided")
 
   if(is.null(init.loc) & is.null(init.wb_path)  ) stop("Inital location estimate not provided")
@@ -311,6 +311,7 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )   {train.data= list(X.train.lin.q); print("Defining fully-linear model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.train.lin.q),Y.valid)}
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(X.train.add.basis.q); print("Defining fully-additive model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.train.add.basis.q),Y.valid)}
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(X.train.nn.q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.train.nn.q),Y.valid)}
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   {train.data= list(); print("Defining stationary model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   
   S_lambda.q=S_lambda$S_lambda.q
   if(is.null(S_lambda.q)){print("No smoothing penalty used for q_\alpha")}
@@ -327,6 +328,7 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.lin.s)); print("Defining fully-linear model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.s)),Y.valid)}
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.add.basis.s)); print("Defining fully-additive model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.train.add.basis.s)),Y.valid)}
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data= c(train.data,list(X.train.nn.s)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.train.nn.s)),Y.valid)}
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   {train.data= train.data; print("Defining stationary model for s_\beta" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
   S_lambda.s=S_lambda$S_lambda.s
   if(is.null(S_lambda.s)){print("No smoothing penalty used for s_\beta")}
@@ -344,38 +346,39 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
   model<-bGEV.NN.build(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
                          X.train.nn.s,X.train.lin.s,X.train.add.basis.s,
                         type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b, c1, c2)
+ 
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
-  
+ 
   model %>% compile(
     optimizer="adam",
     loss = bgev_loss(alpha,beta,p_a,p_b,c1,c2,S_lambda=S_lambda),
     run_eagerly=T
   )
-  
+
+
   if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_bGEV_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_bGEV_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
-  
-  
+  .GlobalEnv$model <- model
   if(!is.null(Y.valid)){
-    history <- model %>% fit(
-      train.data, Y.train,
+    history <- model %>% keras::fit(
+      x=train.data, y=Y.train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint),
       validation_data=validation.data
-      
+
     )
   }else{
-    
-    history <- model %>% fit(
-      train.data, Y.train,
+
+    history <- model %>% keras::fit(
+      x=train.data, y=Y.train,
       epochs = n.ep, batch_size = batch.size,
       callback=list(checkpoint)
     )
   }
-  
+
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_bGEV_checkpoint"))
-  
-  
+
+
   return(model)
 }
 #' @rdname bGEV.NN
@@ -384,8 +387,7 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
 bGEV.NN.predict=function(X.train.q,X.train.s, model)
 {
   library(tensorflow)
-  if(is.null(X.train.q)  ) stop("No predictors provided for q_\alpha")
-  if(is.null(X.train.s)  ) stop("No predictors provided for s_\beta")
+  if(is.null(X.train.q) &  is.null(X.train.s)  ) stop("No predictors provided for q_alpha or s_beta: Stationary models are not permitted ")
   
   
   
@@ -401,6 +403,7 @@ bGEV.NN.predict=function(X.train.q,X.train.s, model)
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )   train.data= list(X.train.lin.q)
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list(X.train.add.basis.q)
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list(X.train.nn.q)
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )   train.data= list()
   
   X.train.nn.s=X.train.s$X.train.nn.s
   X.train.lin.s=X.train.s$X.train.lin.s
@@ -413,6 +416,7 @@ bGEV.NN.predict=function(X.train.q,X.train.s, model)
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )   train.data= c(train.data,list(X.train.lin.s))
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )   train.data= c(train.data,list(X.train.add.basis.s))
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) ) train.data= c(train.data,list(X.train.nn.s))
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) ) train.data= train.data
   
   
   predictions<-model %>% predict( train.data)
@@ -436,8 +440,8 @@ bGEV.NN.predict=function(X.train.q,X.train.s, model)
 #'
 #'
 bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
-                         X.train.nn.s,X.train.lin.s,X.train.add.basis.s,
-                         type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b,c1,c2)
+                       X.train.nn.s,X.train.lin.s,X.train.add.basis.s,
+                       type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b,c1,c2)
 {
   #Additive inputs
   if(!is.null(X.train.add.basis.q))  input_add_q<- layer_input(shape = dim(X.train.add.basis.q)[-1], name = 'add_input_q')
@@ -457,27 +461,27 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
   
   if(!is.null(X.train.nn.q)){
     xiBranch <- input_nn_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.q)[-1], trainable=F,
-                                        weights=list(matrix(0,nrow=dim(X.train.nn.q)[length(dim(X.train.nn.q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                           weights=list(matrix(0,nrow=dim(X.train.nn.q)[length(dim(X.train.nn.q))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }else  if(!is.null(X.train.nn.s)){
     xiBranch <- input_nn_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.s)[-1], trainable=F,
-                                        weights=list(matrix(0,nrow=dim(X.train.nn.s)[length(dim(X.train.nn.s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                           weights=list(matrix(0,nrow=dim(X.train.nn.s)[length(dim(X.train.nn.s))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }else  if(!is.null(X.train.lin.q)){
     xiBranch <- input_lin_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.lin.q)[-1], trainable=F,
-                                        weights=list(matrix(0,nrow=dim(X.train.lin.q)[length(dim(X.train.lin.q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                            weights=list(matrix(0,nrow=dim(X.train.lin.q)[length(dim(X.train.lin.q))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }else  if(!is.null(X.train.lin.s)){
     xiBranch <- input_lin_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.lin.s)[-1], trainable=F,
-                                        weights=list(matrix(0,nrow=dim(X.train.lin.s)[length(dim(X.train.lin.s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                            weights=list(matrix(0,nrow=dim(X.train.lin.s)[length(dim(X.train.lin.s))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }else if(!is.null(X.train.add.basis.q)){
     xiBranch <- input_add_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.add.basis.q)[-1], trainable=F,
-                                            weights=list(matrix(0,nrow=dim(X.train.add.basis.q)[length(dim(X.train.add.basis.q))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                            weights=list(matrix(0,nrow=dim(X.train.add.basis.q)[length(dim(X.train.add.basis.q))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }else  if(!is.null(X.train.add.basis.s)){
     xiBranch <- input_add_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.add.basis.s)[-1], trainable=F,
-                                            weights=list(matrix(0,nrow=dim(X.train.add.basis.s)[length(dim(X.train.add.basis.s))],ncol=1),array(1,dim=c(1))), name = 'xi_dense') %>%
+                                            weights=list(matrix(0,nrow=dim(X.train.add.basis.s)[length(dim(X.train.add.basis.s))],ncol=1),array(1,dim=c(1))), name = 'xi_stationary_dense') %>%
       layer_dense(units = 1 ,activation = 'sigmoid',use_bias = F,weights=list(matrix(qlogis(init.xi),nrow=1,ncol=1)), name = 'xi_activation')
   }
   
@@ -543,14 +547,14 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.q)[2:(n.dim.add_q-2)],prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_q',
+      layer_dense(units = 1, activation = 'linear', name = 'add_q_dense',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1)),use_bias = F)
   }
   if(!is.null(X.train.add.basis.q) & is.null(X.train.add.basis.q) ) {
     
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.q)[2:(n.dim.add_q-2)],prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_q',
+      layer_dense(units = 1, activation = 'linear', name = 'add_q_dense',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1),array(init.loc)),use_bias = T)
   }
   #Spread
@@ -559,14 +563,14 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.s)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_s',
+      layer_dense(units = 1, activation = 'linear', name = 'add_s_dense',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1)),use_bias = F)
   }
   if(!is.null(X.train.add.basis.s) & is.null(X.train.add.basis.s) ) {
     
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.s)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_s',
+      layer_dense(units = 1, activation = 'linear', name = 'add_s_dense',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1),array(init.spread)),use_bias = T)
   }
   #Linear towers
@@ -578,12 +582,12 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q )){
       linBranchq <- input_lin_q%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q',
+                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q_dense',
                     weights=list(matrix(0,nrow=dim(X.train.lin.q)[n.dim.lin_q],ncol=1),array(init.loc)),use_bias=T)
     }else{
       linBranchq <- input_lin_q%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q',
+                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q_dense',
                     weights=list(matrix(0,nrow=dim(X.train.lin.q)[n.dim.lin_q],ncol=1)),use_bias=F)
     }
   }
@@ -594,37 +598,82 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s )){
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s',
+                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s_dense',
                     weights=list(matrix(0,nrow=dim(X.train.lin.s)[n.dim.lin_s],ncol=1),array(init.spread)),use_bias=T)
     }else{
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s',
+                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s_dense',
                     weights=list(matrix(0,nrow=dim(X.train.lin.s)[n.dim.lin_s],ncol=1)),use_bias=F)
     }
   }
   
+  #Stationary towers
+  
   #Location
-  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
-  if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
-  if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add nn+lin towers
-  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add nn+GAM towers
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q)) {
+    
+    if(!is.null(X.train.nn.s)){
+      statBranchq <- input_nn_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.s)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(X.train.nn.s)[length(dim(X.train.nn.s))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
+    }else  if(!is.null(X.train.lin.s)){
+      statBranchq <- input_lin_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.lin.s)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.train.lin.s)[length(dim(X.train.lin.s))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
+    }else  if(!is.null(X.train.add.basis.s)){
+      statBranchq <- input_add_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.add.basis.s)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.train.add.basis.s)[length(dim(X.train.add.basis.s))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
+    }
+    
+  }
+  
+  #Spread
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s)) {
+    
+    if(!is.null(X.train.nn.q)){
+      statBranchs <- input_nn_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.q)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(X.train.nn.q)[length(dim(X.train.nn.q))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.spread),nrow=1,ncol=1)), name = 's_stationary_dense2')
+    }else  if(!is.null(X.train.lin.q)){
+      statBranchs <- input_lin_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.q)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.train.nn.q)[length(dim(X.train.nn.q))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.spread),nrow=1,ncol=1)), name = 's_stationary_dense2')
+    }else  if(!is.null(X.train.add.basis.q)){
+      statBranchs <- input_add_q %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.q)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.train.nn.q)[length(dim(X.train.nn.q))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+        layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.spread),nrow=1,ncol=1)), name = 's_stationary_dense2')
+    }
+    
+  }
+  
+  
+  #Combine towers
+  
+  #Location
+  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq),name="Combine_q_components")  #Add all towers
+  if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq),name="Combine_q_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq),name="Combine_q_components")  #Add nn+lin towers
+  if(!is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq),name="Combine_q_components")  #Add nn+GAM towers
   if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & !is.null(X.train.lin.q) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X.train.nn.q) & !is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- nnBranchq  #Just nn tower
+  if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q) & is.null(X.train.lin.q) )  qBranchjoined <- statBranchq  #Just stationary tower
   
   #Spread
-  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs))  #Add all towers
-  if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs))  #Add GAM+lin towers
-  if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs))  #Add nn+lin towers
-  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs))  #Add nn+GAM towers
+  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs),name="Combine_s_components")  #Add all towers
+  if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs),name="Combine_s_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs),name="Combine_s_components")  #Add nn+lin towers
+  if(!is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs),name="Combine_s_components")  #Add nn+GAM towers
   if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & !is.null(X.train.lin.s) )  sBranchjoined <- linBranchs  #Just lin tower
   if(is.null(X.train.nn.s) & !is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- addBranchs  #Just GAM tower
   if(!is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- nnBranchs  #Just nn tower
+  if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s) & is.null(X.train.lin.s) )  sBranchjoined <- statBranchs  #Just stationary tower
   
   #Apply link functions
-  if(link.loc=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential') else if(link.loc=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity')
-  sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential')
+  if(link.loc=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential', name = "q_activation") else if(link.loc=="identity") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'linear', name = "q_activation")
+  sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential', name = "s_activation")
   
   input=c()
   if(!is.null(X.train.lin.q) ) input=c(input,input_lin_q)
@@ -636,7 +685,7 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
   input=c(input)
   
   
-  output <- layer_concatenate(c(qBranchjoined,sBranchjoined, xiBranch))
+  output <- layer_concatenate(c(qBranchjoined,sBranchjoined, xiBranch),name="Combine_parameter_tensors")
   
   model <- keras_model(  inputs = input,   outputs = output,name=paste0("bGEV"))
   print(model)
@@ -691,7 +740,7 @@ logH=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds){
   
   t2=K$exp(-z2)
   
- 
+  
   
   return((p*(-t1)*(1-zeroz1_inds)+(1-p)*(-t2))*obsInds)
 }
@@ -746,40 +795,40 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
   S_lambda.q=S_lambda$S_lambda.q;   S_lambda.s=S_lambda$S_lambda.s
   
   if(is.null(S_lambda.q) & is.null(S_lambda.s)){
-  loss<- function( y_true, y_pred) {
-    
-    library(tensorflow)
-    K <- backend()
-    
-    
-    q_a=y_pred[all_dims(),1]
-    s_b=y_pred[all_dims(),2]
-    xi=y_pred[all_dims(),3]
-    
-    
-    
-    
-    # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
-    # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-    obsInds=K$sign(K$relu(y_true+1e4))
-    
-  
-    
-    a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
-    b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
-    b =b + (1-obsInds)
-    s_b=s_b+(1-obsInds)
-    
-    
-    l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-    l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
-    
-    l2=K$log(l2+(1-obsInds))*obsInds
-    
-    return( -K$sum(l1)
-            -K$sum(l2) 
-            )
-  }
+    loss<- function( y_true, y_pred) {
+      
+      library(tensorflow)
+      K <- backend()
+      
+      
+      q_a=y_pred[all_dims(),1]
+      s_b=y_pred[all_dims(),2]
+      xi=y_pred[all_dims(),3]
+      
+      
+      
+      
+      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+1e4))
+      
+      
+      
+      a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
+      b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
+      b =b + (1-obsInds)
+      s_b=s_b+(1-obsInds)
+      
+      
+      l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+      l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      
+      l2=K$log(l2+(1-obsInds))*obsInds
+      
+      return( -K$sum(l1)
+              -K$sum(l2) 
+      )
+    }
   }else if(!is.null(S_lambda.q) & !is.null(S_lambda.s)){
     loss<- function( y_true, y_pred) {
       
@@ -835,7 +884,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-
+      
       t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
       gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
       S_lambda.s.tensor=K$constant(S_lambda.s)
@@ -880,7 +929,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
       S_lambda.q.tensor=K$constant(S_lambda.q)
-    
+      
       
       penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))
       

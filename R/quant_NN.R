@@ -176,6 +176,8 @@
 #'#model  <- load_model_tf(paste0("model_",tau,"-quantile"),
 #'#custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
 #'
+#' @import reticulate tensorflow keras
+#'
 #' @rdname quant.NN
 #' @export
 
@@ -225,7 +227,8 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",link="identi
 
   if(!is.null(Y.valid)) checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "val_loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch") else checkpoint <- callback_model_checkpoint(paste0("model_",tau,"-quantile_checkpoint"), monitor = "loss", verbose = 0,   save_best_only = TRUE, save_weights_only = TRUE, mode = "min",   save_freq = "epoch")
 
-
+  .GlobalEnv$model <- model
+  
   if(!is.null(Y.valid)){
     history <- model %>% fit(
       train.data, Y.train,
@@ -359,17 +362,17 @@ quant.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.q, 
 
 
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add NN+lin towers
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add NN+GAM towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq),name="Combine_q_components")  #Add all towers
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq),name="Combine_q_components")  #Add GAM+lin towers
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq),name="Combine_q_components")  #Add NN+lin towers
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq),name="Combine_q_components")  #Add NN+GAM towers
   if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  qBranchjoined <- nnBranchq  #Just NN tower
 
 
   #Apply link functions
-  if(link=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential') else if(link=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity')
+  if(link=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential', name = "q_activation") else if(link=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity', name = "q_activation")
 
 
   if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
