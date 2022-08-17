@@ -168,10 +168,10 @@ X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 "X.train.add.basis"=X.train.add.basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
+NN.fit<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
                       batch.size=50, widths=c(6,3),S_lambda=S_lambda)
 
-out<-quant.NN.predict(X.train,model)
+out<-quant.NN.predict(X.train,NN.fit$model)
 hist(out$predictions) #Plot histogram of predicted quantiles
 print(out$lin.coeff)
 
@@ -192,12 +192,12 @@ for(i in 1:n.add.preds){
 
 tau <- 0.5
 #To save model, run
-# model \%>\% save_model_tf(paste0("model_",tau,"-quantile"))
+# NN.fit$model \%>\% save_model_tf(paste0("model_",tau,"-quantile"))
 #To load model, run
 #model  <- load_model_tf(paste0("model_",tau,"-quantile"),
 #custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
 
 }
 \references{
-Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }

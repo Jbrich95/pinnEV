@@ -159,11 +159,11 @@ X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 "X.train.add.basis"=X.train.add.basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP
-model<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
+NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
                       batch.size=50,init.p=0.4, widths=c(6,3),
                       S_lambda=S_lambda)
 
-out<-predict_bernoulli_nn(X.train,model)
+out<-predict_bernoulli_nn(X.train,NN.fit$model)
 hist(out$predictions) #Plot histogram of predicted probability
 print(out$lin.coeff)
 
@@ -182,13 +182,13 @@ for(i in 1:n.add.preds){
  #Adds red triangles that denote knot locations
 }
 
-#To save model, run model \%>\% save_model_tf("model_Bernoulli")
+#To save model, run NN.fit$model \%>\% save_model_tf("model_Bernoulli")
 #To load model, run model  <- load_model_tf("model_Bernoulli",
 #custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
 
 }
 \references{
 {
-Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }
 }

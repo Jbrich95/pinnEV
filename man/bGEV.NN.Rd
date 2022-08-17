@@ -245,16 +245,16 @@ X.train.s=list("X.train.nn.s"=X.train.nn.s, "X.train.lin.s"=X.train.lin.s,
 
 
 #Fit the bGEV model
-model<-bGEV.NN.train(Y.train, Y.valid,X.train.q,X.train.s, type="MLP",link.loc="identity",
+fit<-bGEV.NN.train(Y.train, Y.valid,X.train.q,X.train.s, type="MLP",link.loc="identity",
                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
                        widths=c(6,3),seed=1,S_lambda=S_lambda)
-out<-bGEV.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,model)
+out<-bGEV.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,fit$model)
 
 print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 
 #To save model, run
-#model \%>\% save_model_tf("model_bGEV")
+#NN.fit$model \%>\% save_model_tf("model_bGEV")
 #To load model, run
 # model  <- load_model_tf("model_bGEV",
 #  custom_objects=list(
@@ -307,6 +307,6 @@ for(i in 1:n.add.preds_s){
 Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
 (\href{https://doi.org/10.1002/env.2742}{doi})
 
-Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }
 }

@@ -145,10 +145,10 @@
 #' "X.train.add.basis"=X.train.add.basis)
 #'
 #'#Build and train a two-layered "lin+GAM+NN" MLP
-#' model<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
+#' NN.fit<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
 #'                       batch.size=50, widths=c(6,3),S_lambda=S_lambda)
 #'
-#' out<-quant.NN.predict(X.train,model)
+#' out<-quant.NN.predict(X.train,NN.fit$model)
 #'hist(out$predictions) #Plot histogram of predicted quantiles
 
 #' print(out$lin.coeff)
@@ -171,7 +171,7 @@
 #'
 #' tau <- 0.5
 #'#To save model, run
-#'# model %>% save_model_tf(paste0("model_",tau,"-quantile"))
+#'# NN.fit$model %>% save_model_tf(paste0("model_",tau,"-quantile"))
 #'#To load model, run
 #'#model  <- load_model_tf(paste0("model_",tau,"-quantile"),
 #'#custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
@@ -248,7 +248,16 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",link="identi
 
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_",tau,"-quantile_checkpoint"))
-
+  print("Final training loss")
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  if(!is.null(Y.valid)){
+    print("Final validation loss")
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
+  }else{
+    return(list("model"=model,"Training loss"=loss.train))
+  }
+  
 
   return(model)
 }

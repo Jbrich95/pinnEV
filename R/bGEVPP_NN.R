@@ -238,16 +238,16 @@
 #' u.train <- u
 #'
 #' #Fit the bGEV-PP model using u.train
-#' model<-bGEVPP.NN.train(Y.train, Y.valid,X.train.q,X.train.s, u.train, type="MLP",link.loc="identity",
+#' NN.fit<-bGEVPP.NN.train(Y.train, Y.valid,X.train.q,X.train.s, u.train, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
 #'                        widths=c(6,3),seed=1, n_b=12,S_lambda=S_lambda)
-#' out<-bGEVPP.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,u.train=u.train,model)
+#' out<-bGEVPP.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,u.train=u.train,NN.fit$model)
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 #'
 #' #To save model, run
-#' #model %>% save_model_tf("model_bGEVPP")
+#' #model %>% NN.fit$save_model_tf("model_bGEVPP")
 #' #To load model, run
 #' # model  <- load_model_tf("model_bGEVPP",
 #' #  custom_objects=list(
@@ -398,7 +398,16 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, u.train = 
 
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_bGEVPP_checkpoint"))
-
+  print("Final training loss")
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  if(!is.null(Y.valid)){
+    print("Final validation loss")
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
+  }else{
+    return(list("model"=model,"Training loss"=loss.train))
+  }
+  
 
   return(model)
 }

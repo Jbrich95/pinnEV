@@ -64,60 +64,62 @@
 #' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
 #' (\href{https://doi.org/10.1002/env.2742}{doi})
 #'
-#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'}
 #' @examples
 #'
 #' # Build and train a simple MLP for toy data
 #'
+#'set.seed(1)
+#'
 #' # Create  predictors
-#' preds<-rnorm(128000)
+#' preds<-rnorm(prod(c(200,8,8,8)))
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
 #' #last to the different components of the predictor set
-#' dim(preds)=c(200,8,8,10) #We have ten predictors
+#' dim(preds)=c(200,8,8,8) #We have eight predictors
 #'
 #' #Split predictors into linear, additive and nn. Different for the location and scale parameters.
-#' X.train.nn.q=preds[,,,1:5] #Five nn predictors for q_\alpha
-#' X.train.lin.q=preds[,,,6:7] #Two linear predictors for q_\alpha
-#' X.train.add.q=preds[,,,8:10] #Three additive predictors for q_\alpha
+#'X.train.nn.q=preds[,,,1:4] #Four nn predictors for q_\alpha
+#'X.train.lin.q=preds[,,,5:6] #Two additive predictors for q_\alpha
+#'X.train.add.q=preds[,,,7:8] #Two additive predictors for q_\alpha
 #'
-#' X.train.nn.s=preds[,,,1:3] #Three nn predictors for s_\beta
-#' X.train.lin.s=preds[,,,4:8] #Five linear predictors for s_\beta
-#' X.train.add.s=preds[,,,9:10] #Two additive predictors for s_\beta
+#'X.train.nn.s=preds[,,,1:2] #Two nn predictors for s_\beta
+#'X.train.lin.s=preds[,,,3] #One linear predictor for s_\beta
+#'dim(X.train.lin.s)=c(dim(X.train.lin.s),1) #Change dimension so consistent
+#'X.train.add.s=preds[,,,4] #One additive predictor for s_\beta
+#'dim(X.train.add.s)=c(dim(X.train.add.s),1) #Change dimension so consistent
 #'
 #'
 #' # Create toy response data
 #'
 #' #Contribution to location parameter
-#' #Linear contribution
-#' m_L_1 = 0.3*X.train.lin.q[,,,1]+0.6*X.train.lin.q[,,,2]
+#'#Linear contribution
+#'m_L_1 = 0.3*X.train.lin.q[,,,1]+0.6*X.train.lin.q[,,,2]
 #'
-#' # Additive contribution
-#' m_A_1 = 0.1*X.train.add.q[,,,1]^3+0.2*X.train.add.q[,,,1]-
-#'   0.1*X.train.add.q[,,,2]^3+0.5*X.train.add.q[,,,2]^2-0.2*X.train.add.q[,,,3]^3
+#'# Additive contribution
+#'m_A_1 = 0.1*X.train.add.q[,,,1]^3+0.2*X.train.add.q[,,,1]-
+#'  0.1*X.train.add.q[,,,2]^3+0.5*X.train.add.q[,,,2]^2
 #'
-#' #Non-additive contribution - to be estimated by NN
-#' m_N_1 = exp(-3+X.train.nn.q[,,,2]+X.train.nn.q[,,,3])+
-#'   sin(X.train.nn.q[,,,1]-X.train.nn.q[,,,2])*(X.train.nn.q[,,,1]+X.train.nn.q[,,,2])-
-#'   cos(X.train.nn.q[,,,3]-X.train.nn.q[,,,4])*(X.train.nn.q[,,,2]+X.train.nn.q[,,,5])
+#'#Non-additive contribution - to be estimated by NN
+#'m_N_1 = 0.5*exp(-3+X.train.nn.q[,,,4]+X.train.nn.q[,,,1])+
+#'  sin(X.train.nn.q[,,,1]-X.train.nn.q[,,,2])*(X.train.nn.q[,,,4]+X.train.nn.q[,,,2])-
+#'  cos(X.train.nn.q[,,,4]-X.train.nn.q[,,,1])*(X.train.nn.q[,,,3]+X.train.nn.q[,,,1])
 #'
 #' q_alpha=1+m_L_1+m_A_1+m_N_1 #Identity link
 #'
 #' #Contribution to scale parameter
-#' #Linear contribution
-#' m_L_2 = 0.2*X.train.lin.s[,,,1]+0.6*X.train.lin.s[,,,2]+0.1*X.train.lin.s[,,,3]-
-#'   0.2*X.train.lin.s[,,,4]+0.5*X.train.lin.s[,,,5]
+#'#Linear contribution
+#'m_L_2 = 0.5*X.train.lin.s[,,,1]
 #'
-#' # Additive contribution
-#' m_A_2 = 0.1*X.train.add.s[,,,1]^2+0.2*X.train.add.s[,,,1]-0.2*X.train.add.s[,,,2]^2+
-#'   0.1*X.train.add.s[,,,2]^3
+#'# Additive contribution
+#'m_A_2 = 0.1*X.train.add.s[,,,1]^2+0.2*X.train.add.s[,,,1]
 #'
-#' #Non-additive contribution - to be estimated by NN
-#'m_N_2 = 0.25*exp(-3+X.train.nn.s[,,,2]+X.train.nn.s[,,,3])+
-#' sin(X.train.nn.s[,,,1]-X.train.nn.s[,,,2])*(X.train.nn.s[,,,1]+X.train.nn.s[,,,2])
+#'#Non-additive contribution - to be estimated by NN
+#'m_N_2 = 0.2*exp(-4+X.train.nn.s[,,,2]+X.train.nn.s[,,,1])+
+#'  sin(X.train.nn.s[,,,1]-X.train.nn.s[,,,2])*(X.train.nn.s[,,,1]+X.train.nn.s[,,,2])
 #'
-#' s_beta=0.3*exp(-2+m_L_2+m_A_2+m_N_2) #Exponential link
+#'s_beta=0.2*exp(m_L_2+m_A_2+m_N_2) #Exponential link
 #'
 #' xi=0.1 # Set xi
 #'
@@ -167,10 +169,10 @@
 #'     #Evaluate rad at all entries to X.train.add.q and for all knots
 #'   }}
 #'   
-#'   #'#Create smoothing penalty matrix for the three q_alpha additive functions
+#'   #'#Create smoothing penalty matrix for the two q_alpha additive functions
 #' 
-#'# Set smoothness parameters for three functions
-#'  lambda = c(0.5,1,0.2) 
+#'# Set smoothness parameters for two functions
+#'  lambda = c(0.1,0.2) 
 #'
 #' S_lambda.q=matrix(0,nrow=n.knot.q*dim(X.train.add.q)[4],ncol=n.knot.q*dim(X.train.add.q)[4])
 #'for(i in 1:dim(X.train.add.q)[4]){
@@ -181,13 +183,13 @@
 #' }
 #'}
 #'
-#' #Get knots for s_\beta predictors
+#' #Get knots for s_\beta predictor
 #' knots.s=matrix(nrow=dim(X.train.add.s)[4],ncol=n.knot.s)
 #' for( i in 1:dim(X.train.add.s)[4]){
 #'  knots.s[i,]=quantile(X.train.add.s[,,,i],probs=seq(0,1,length=n.knot.s))
 #' }
 #'
-#' #Evaluate radial basis functions for s_\beta predictors
+#' #Evaluate radial basis functions for s_\beta predictor
 #' X.train.add.basis.s<-array(dim=c(dim(X.train.add.s),n.knot.s))
 #' for( i in 1:dim(X.train.add.s)[4]) {
 #'   for(k in 1:n.knot.s) {
@@ -195,10 +197,10 @@
 #'     #Evaluate rad at all entries to X.train.add.q and for all knots
 #'   }}
 #'
-#'#Create smoothing penalty matrix for the two s_beta additive functions
+#'#Create smoothing penalty matrix for the s_beta additive function
 #' 
-#'# Set smoothness parameters for three functions
-#'  lambda = c(1,1) 
+#'# Set smoothness parameter
+#'  lambda = c(0.2) 
 #'
 #' S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.train.add.s)[4],ncol=n.knot.s*dim(X.train.add.s)[4])
 #'for(i in 1:dim(X.train.add.s)[4]){
@@ -221,16 +223,16 @@
 #'
 #'
 #' #Fit the bGEV model
-#' model<-bGEV.NN.train(Y.train, Y.valid,X.train.q,X.train.s, type="MLP",link.loc="identity",
-#'                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
+#' NN.fit<-bGEV.NN.train(Y.train, Y.valid,X.train.q,X.train.s, type="MLP",link.loc="identity",
+#'                        n.ep=500, batch.size=50,init.loc=2, init.spread=5,init.xi=0.1,
 #'                        widths=c(6,3),seed=1,S_lambda=S_lambda)
-#' out<-bGEV.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,model)
+#' out<-bGEV.NN.predict(X.train.q=X.train.q,X.train.s=X.train.s,NN.fit$model)
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 #' 
 #' #To save model, run
-#' #model %>% save_model_tf("model_bGEV")
+#' #NN.fit$model %>% save_model_tf("model_bGEV")
 #' #To load model, run
 #' # model  <- load_model_tf("model_bGEV",
 #' #  custom_objects=list(
@@ -377,9 +379,17 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.train.q,X.train.s, type="MLP",l
 
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_bGEV_checkpoint"))
+  print("Final training loss")
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  if(!is.null(Y.valid)){
+  print("Final validation loss")
+  loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+  return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
+  }else{
+    return(list("model"=model,"Training loss"=loss.train))
+  }
 
-
-  return(model)
+  
 }
 #' @rdname bGEV.NN
 #' @export
@@ -547,14 +557,14 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.q)[2:(n.dim.add_q-2)],prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_q_dense',
+      layer_dense(units = 1, activation = 'linear', name = 'add_q',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1)),use_bias = F)
   }
   if(!is.null(X.train.add.basis.q) & is.null(X.train.add.basis.q) ) {
     
     addBranchq <- input_add_q %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.q)[2:(n.dim.add_q-2)],prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_q_dense',
+      layer_dense(units = 1, activation = 'linear', name = 'add_q',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.q)[(n.dim.add_q-1):n.dim.add_q]),ncol=1),array(init.loc)),use_bias = T)
   }
   #Spread
@@ -563,14 +573,14 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.s)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_s_dense',
+      layer_dense(units = 1, activation = 'linear', name = 'add_s',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1)),use_bias = F)
   }
   if(!is.null(X.train.add.basis.s) & is.null(X.train.add.basis.s) ) {
     
     addBranchs <- input_add_s %>%
       layer_reshape(target_shape=c(dim(X.train.add.basis.s)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]))) %>%
-      layer_dense(units = 1, activation = 'linear', name = 'add_s_dense',
+      layer_dense(units = 1, activation = 'linear', name = 'add_s',
                   weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.s)[(n.dim.add_s-1):n.dim.add_s]),ncol=1),array(init.spread)),use_bias = T)
   }
   #Linear towers
@@ -582,12 +592,12 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     if(is.null(X.train.nn.q) & is.null(X.train.add.basis.q )){
       linBranchq <- input_lin_q%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q_dense',
+                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q',
                     weights=list(matrix(0,nrow=dim(X.train.lin.q)[n.dim.lin_q],ncol=1),array(init.loc)),use_bias=T)
     }else{
       linBranchq <- input_lin_q%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q_dense',
+                    input_shape =dim(X.train.lin.q)[-1], name = 'lin_q',
                     weights=list(matrix(0,nrow=dim(X.train.lin.q)[n.dim.lin_q],ncol=1)),use_bias=F)
     }
   }
@@ -598,12 +608,12 @@ bGEV.NN.build=function(X.train.nn.q,X.train.lin.q,X.train.add.basis.q,
     if(is.null(X.train.nn.s) & is.null(X.train.add.basis.s )){
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s_dense',
+                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s',
                     weights=list(matrix(0,nrow=dim(X.train.lin.s)[n.dim.lin_s],ncol=1),array(init.spread)),use_bias=T)
     }else{
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s_dense',
+                    input_shape =dim(X.train.lin.s)[-1], name = 'lin_s',
                     weights=list(matrix(0,nrow=dim(X.train.lin.s)[n.dim.lin_s],ncol=1)),use_bias=F)
     }
   }

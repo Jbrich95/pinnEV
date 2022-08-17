@@ -139,11 +139,11 @@
 #' "X.train.add.basis"=X.train.add.basis)
 #'
 #' #Build and train a two-layered "lin+GAM+NN" MLP
-#' model<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
+#' NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
 #'                       batch.size=50,init.p=0.4, widths=c(6,3),
 #'                       S_lambda=S_lambda)
 #'
-#' out<-predict_bernoulli_nn(X.train,model)
+#' out<-predict_bernoulli_nn(X.train,NN.fit$model)
 #' hist(out$predictions) #Plot histogram of predicted probability
 #' print(out$lin.coeff)
 #'
@@ -162,7 +162,7 @@
 #'  #Adds red triangles that denote knot locations
 #'}
 #'
-#'#To save model, run model %>% save_model_tf("model_Bernoulli")
+#'#To save model, run NN.fit$model %>% save_model_tf("model_Bernoulli")
 #'#To load model, run model  <- load_model_tf("model_Bernoulli",
 #'#custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
 #'
@@ -237,7 +237,16 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
   }
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_bernoulli_checkpoint"))
-
+  print("Final training loss")
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  if(!is.null(Y.valid)){
+    print("Final validation loss")
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
+  }else{
+    return(list("model"=model,"Training loss"=loss.train))
+  }
+  
   return(model)
 }
 #' @rdname logistic.NN

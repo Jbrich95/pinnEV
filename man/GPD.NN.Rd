@@ -193,15 +193,15 @@ X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 u.train <- u
 
 #Fit the GPD model for exceedances above u.train
-model<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
+fit<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
                     widths=c(6,3),seed=1,S_lambda=S_lambda)
-out<-GPD.NN.predict(X.train=X.train,u.train=u.train,model)
+out<-GPD.NN.predict(X.train=X.train,u.train=u.train,fit$model)
 
 print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 
 #To save model, run
-#model \%>\% save_model_tf("model_GPD")
+#NN.fit$model \%>\% save_model_tf("model_GPD")
 To load model, run
 #model  <- load_model_tf("model_GPD",
 #custom_objects=list("GPD_loss_S_lambda___S_lambda_"=GPD_loss(S_lambda=S_lambda)))
@@ -228,6 +228,6 @@ for(i in 1:n.add.preds){
 {
 Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/F978-1-4471-3675-0}{doi})
 
-Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }
 }

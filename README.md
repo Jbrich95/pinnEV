@@ -33,3 +33,9 @@ install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14
 
 ```
 
+## Coming in future updates 
+* Weight regularisation and dropout
+* New statistical models - Gamma, lognormal, extendedGPD
+* Different architecture per parameter
+* Non-stationary xi in GPD and bGEV models 
+

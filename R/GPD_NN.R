@@ -171,15 +171,15 @@
 #' u.train <- u
 #' 
 #' #Fit the GPD model for exceedances above u.train
-#' model<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
+#' fit<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
 #'                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
 #'                     widths=c(6,3),seed=1,S_lambda=S_lambda)
-#' out<-GPD.NN.predict(X.train=X.train,u.train=u.train,model)
+#' out<-GPD.NN.predict(X.train=X.train,u.train=u.train,fit$model)
 #' 
 #' print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 #' 
 #' #To save model, run
-#' #model %>% save_model_tf("model_GPD")
+#' #NN.fit$model %>% save_model_tf("model_GPD")
 #' To load model, run
 #' #model  <- load_model_tf("model_GPD",
 #' #custom_objects=list("GPD_loss_S_lambda___S_lambda_"=GPD_loss(S_lambda=S_lambda)))
@@ -279,6 +279,15 @@
   
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_GPD_checkpoint"))
+  print("Final training loss")
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  if(!is.null(Y.valid)){
+    print("Final validation loss")
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
+  }else{
+    return(list("model"=model,"Training loss"=loss.train))
+  }
   
   
   return(model)
