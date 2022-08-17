@@ -60,7 +60,7 @@
 #' @keywords datasets
 #'
 #'@references Richards, J. and Huser, R. (2022), \emph{High-dimensional extreme quantile regression using 
-#'partially-interpretable neural networks: With application to U.S. wildfires.}
+#'partially-interpretable neural networks: With application to U.S. wildfires}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
 #'Short, K. C. (2017), \emph{Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508].  
 #'4th Ed. Fort Collins, CO: Forest Service Research Data Archive.}

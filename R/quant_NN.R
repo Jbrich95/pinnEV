@@ -53,7 +53,7 @@
 #' @return \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
 #'
 #' @references
-#'Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression.}
+#'Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
 #'
 #' @examples
