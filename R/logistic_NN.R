@@ -65,7 +65,8 @@
 #' X.train.nn<-rnorm(5000); X.train.add<-rnorm(2000); X.train.lin<-rnorm(3000)
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
-#' #last to the different components of the predictor set
+#' #last to the different components of the predictor set.
+#' #Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
 #' dim(X.train.nn)=c(10,10,10,5) #Five nn predictors
 #' dim(X.train.lin)=c(10,10,10,3) #Three linear predictors
 #' dim(X.train.add)=c(10,10,10,2) #Two additive predictors
@@ -138,7 +139,8 @@
 #' X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 #' "X.train.add.basis"=X.train.add.basis)
 #'
-#' #Build and train a two-layered "lin+GAM+NN" MLP
+#' #Build and train a two-layered "lin+GAM+NN" logistic MLP. 
+#' #Note that training is not run to completion.
 #' NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
 #'                       batch.size=50,init.p=0.4, widths=c(6,3),
 #'                       S_lambda=S_lambda)

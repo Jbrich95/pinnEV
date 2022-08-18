@@ -68,7 +68,8 @@
 #' preds<-rnorm(128000)
 #' 
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
-#' #last to the different components of the predictor set
+#' #last to the different components of the predictor set.
+#' #Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
 #' dim(preds)=c(200,8,8,10) #We have ten predictors
 #' 
 #' #Split predictors into linear, additive and nn. 
@@ -170,7 +171,7 @@
 #' 
 #' u.train <- u
 #' 
-#' #Fit the GPD model for exceedances above u.train
+#' #Fit the GPD model for exceedances above u.train. Note that training is not run to completion.
 #' fit<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
 #'                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
 #'                     widths=c(6,3),seed=1,S_lambda=S_lambda)

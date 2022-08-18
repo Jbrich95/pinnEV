@@ -73,11 +73,12 @@
 #'set.seed(1)
 #'
 #' # Create  predictors
-#' preds<-rnorm(prod(c(200,8,8,8)))
+#' preds<-rnorm(prod(c(200,10,10,8)))
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
-#' #last to the different components of the predictor set
-#' dim(preds)=c(200,8,8,8) #We have eight predictors
+#' #last to the different components of the predictor set.
+#' #Other dimensions correspond to indices of predictors, e.g., a grid of locations.
+#' dim(preds)=c(200,10,10,8) #We have eight predictors.
 #'
 #' #Split predictors into linear, additive and nn. Different for the location and scale parameters.
 #'X.train.nn.q=preds[,,,1:4] #Four nn predictors for q_\alpha
@@ -222,7 +223,7 @@
 #'                "X.train.add.basis.s"=X.train.add.basis.s) #Predictors for s_\beta
 #'
 #'
-#' #Fit the bGEV model
+#' #Fit the bGEV model. Note that training is not run to completion.
 #' NN.fit<-bGEV.NN.train(Y.train, Y.valid,X.train.q,X.train.s, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=5,init.xi=0.1,
 #'                        widths=c(6,3),seed=1,S_lambda=S_lambda)
@@ -230,6 +231,10 @@
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
+#' 
+#' # Note that this is a simple example that can be run in a personal computer. 
+#' # Whilst the q_alpha functions are well estimated, more data/larger n.ep are required for more accurate
+#' # estimation of s_beta functions and xi
 #' 
 #' #To save model, run
 #' #NN.fit$model %>% save_model_tf("model_bGEV")

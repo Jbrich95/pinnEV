@@ -74,53 +74,54 @@
 #' # Build and train a simple MLP for toy data
 #'
 #' # Create  predictors
-#' preds<-rnorm(128000)
+#' preds<-rnorm(prod(c(200,10,10,8)))
+
 #'
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
-#' #last to the different components of the predictor set
-#' dim(preds)=c(200,8,8,10) #We have ten predictors
+#' #last to the different components of the predictor set.
+#' #Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
+#' dim(preds)=c(200,10,10,8) #We have eight predictors
 #'
 #' #Split predictors into linear, additive and nn. Different for the location and scale parameters.
-#' X.train.nn.q=preds[,,,1:5] #Five nn predictors for q_\alpha
-#' X.train.lin.q=preds[,,,6:7] #Two linear predictors for q_\alpha
-#' X.train.add.q=preds[,,,8:10] #Three additive predictors for q_\alpha
+#'X.train.nn.q=preds[,,,1:4] #Four nn predictors for q_\alpha
+#'X.train.lin.q=preds[,,,5:6] #Two additive predictors for q_\alpha
+#'X.train.add.q=preds[,,,7:8] #Two additive predictors for q_\alpha
 #'
-#' X.train.nn.s=preds[,,,1:3] #Three nn predictors for s_\beta
-#' X.train.lin.s=preds[,,,4:8] #Five linear predictors for s_\beta
-#' X.train.add.s=preds[,,,9:10] #Two additive predictors for s_\beta
-#'
+#'X.train.nn.s=preds[,,,1:2] #Two nn predictors for s_\beta
+#'X.train.lin.s=preds[,,,3] #One linear predictor for s_\beta
+#'dim(X.train.lin.s)=c(dim(X.train.lin.s),1) #Change dimension so consistent
+#'X.train.add.s=preds[,,,4] #One additive predictor for s_\beta
+#'dim(X.train.add.s)=c(dim(X.train.add.s),1) #Change dimension so consistent
 #'
 #' # Create toy response data
 #'
 #' #Contribution to location parameter
-#' #Linear contribution
-#' m_L_1 = 0.3*X.train.lin.q[,,,1]+0.6*X.train.lin.q[,,,2]
+#'#Linear contribution
+#'m_L_1 = 0.3*X.train.lin.q[,,,1]+0.6*X.train.lin.q[,,,2]
 #'
-#' # Additive contribution
-#' m_A_1 = 0.1*X.train.add.q[,,,1]^3+0.2*X.train.add.q[,,,1]-
-#'   0.1*X.train.add.q[,,,2]^3+0.5*X.train.add.q[,,,2]^2-0.2*X.train.add.q[,,,3]^3
+#'# Additive contribution
+#'m_A_1 = 0.1*X.train.add.q[,,,1]^3+0.2*X.train.add.q[,,,1]-
+#'  0.1*X.train.add.q[,,,2]^3+0.5*X.train.add.q[,,,2]^2
 #'
-#' #Non-additive contribution - to be estimated by NN
-#' m_N_1 = exp(-3+X.train.nn.q[,,,2]+X.train.nn.q[,,,3])+
-#'   sin(X.train.nn.q[,,,1]-X.train.nn.q[,,,2])*(X.train.nn.q[,,,1]+X.train.nn.q[,,,2])-
-#'   cos(X.train.nn.q[,,,3]-X.train.nn.q[,,,4])*(X.train.nn.q[,,,2]+X.train.nn.q[,,,5])
+#'#Non-additive contribution - to be estimated by NN
+#'m_N_1 = 0.5*exp(-3+X.train.nn.q[,,,4]+X.train.nn.q[,,,1])+
+#'  sin(X.train.nn.q[,,,1]-X.train.nn.q[,,,2])*(X.train.nn.q[,,,4]+X.train.nn.q[,,,2])-
+#'  cos(X.train.nn.q[,,,4]-X.train.nn.q[,,,1])*(X.train.nn.q[,,,3]+X.train.nn.q[,,,1])
 #'
 #' q_alpha=1+m_L_1+m_A_1+m_N_1 #Identity link
 #'
 #' #Contribution to scale parameter
-#' #Linear contribution
-#' m_L_2 = 0.2*X.train.lin.s[,,,1]+0.6*X.train.lin.s[,,,2]+0.1*X.train.lin.s[,,,3]-
-#'   0.2*X.train.lin.s[,,,4]+0.5*X.train.lin.s[,,,5]
+#'#Linear contribution
+#'m_L_2 = 0.5*X.train.lin.s[,,,1]
 #'
-#' # Additive contribution
-#' m_A_2 = 0.1*X.train.add.s[,,,1]^2+0.2*X.train.add.s[,,,1]-0.2*X.train.add.s[,,,2]^2+
-#'   0.1*X.train.add.s[,,,2]^3
+#'# Additive contribution
+#'m_A_2 = 0.1*X.train.add.s[,,,1]^2+0.2*X.train.add.s[,,,1]
 #'
-#' #Non-additive contribution - to be estimated by NN
-#' m_N_2 = exp(-3+X.train.nn.s[,,,2]+X.train.nn.s[,,,3])+
-#'   sin(X.train.nn.s[,,,1]-X.train.nn.s[,,,2])*(X.train.nn.s[,,,1]+X.train.nn.s[,,,2])
+#'#Non-additive contribution - to be estimated by NN
+#'m_N_2 = 0.2*exp(-4+X.train.nn.s[,,,2]+X.train.nn.s[,,,1])+
+#'  sin(X.train.nn.s[,,,1]-X.train.nn.s[,,,2])*(X.train.nn.s[,,,1]+X.train.nn.s[,,,2])
 #'
-#' s_beta=0.5*exp(-2+m_L_2+m_A_2+m_N_2) #Exponential link
+#'s_beta=0.2*exp(m_L_2+m_A_2+m_N_2) #Exponential link
 #'
 #' xi=0.1 # Set xi
 #'
@@ -181,10 +182,10 @@
 #'     #Evaluate rad at all entries to X.train.add.q and for all knots
 #'   }}
 #'
-#'#Create smoothing penalty matrix for the three q_alpha additive functions
+#'   #'#Create smoothing penalty matrix for the two q_alpha additive functions
 #' 
-#'# Set smoothness parameters for three functions
-#'  lambda = c(0.5,1,0.2) 
+#'# Set smoothness parameters for two functions
+#'  lambda = c(0.1,0.2) 
 #'
 #' S_lambda.q=matrix(0,nrow=n.knot.q*dim(X.train.add.q)[4],ncol=n.knot.q*dim(X.train.add.q)[4])
 #'for(i in 1:dim(X.train.add.q)[4]){
@@ -195,14 +196,13 @@
 #' }
 #'}
 #'
-#'
-#' #Get knots for s_\beta predictors
+#' #Get knots for s_\beta predictor
 #' knots.s=matrix(nrow=dim(X.train.add.s)[4],ncol=n.knot.s)
 #' for( i in 1:dim(X.train.add.s)[4]){
 #'  knots.s[i,]=quantile(X.train.add.s[,,,i],probs=seq(0,1,length=n.knot.s))
-#'}
+#' }
 #'
-#' #Evaluate radial basis functions for s_\beta predictors
+#' #Evaluate radial basis functions for s_\beta predictor
 #' X.train.add.basis.s<-array(dim=c(dim(X.train.add.s),n.knot.s))
 #' for( i in 1:dim(X.train.add.s)[4]) {
 #'   for(k in 1:n.knot.s) {
@@ -210,10 +210,10 @@
 #'     #Evaluate rad at all entries to X.train.add.q and for all knots
 #'   }}
 #'
-#'#Create smoothing penalty matrix for the two s_beta additive functions
+#'#Create smoothing penalty matrix for the s_beta additive function
 #' 
-#'# Set smoothness parameters for three functions
-#'  lambda = c(1,1) 
+#'# Set smoothness parameter
+#'  lambda = c(0.2) 
 #'
 #' S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.train.add.s)[4],ncol=n.knot.s*dim(X.train.add.s)[4])
 #'for(i in 1:dim(X.train.add.s)[4]){
@@ -237,7 +237,7 @@
 #'
 #' u.train <- u
 #'
-#' #Fit the bGEV-PP model using u.train
+#' #Fit the bGEV-PP model using u.train. Note that training is not run to completion.
 #' NN.fit<-bGEVPP.NN.train(Y.train, Y.valid,X.train.q,X.train.s, u.train, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
 #'                        widths=c(6,3),seed=1, n_b=12,S_lambda=S_lambda)
@@ -245,6 +245,10 @@
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 #' print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
+#'
+#' # Note that this is a simple example that can be run in a personal computer. 
+#' # Whilst the q_alpha functions are well estimated, more data/larger n.ep are required for more accurate
+#' # estimation of s_beta functions and xi
 #'
 #' #To save model, run
 #' #model %>% NN.fit$save_model_tf("model_bGEVPP")
