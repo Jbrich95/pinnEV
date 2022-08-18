@@ -86,37 +86,40 @@ The current state of the model is saved after each epoch, using \code{keras::cal
 
 #Apply model to toy data
 
+set.seed(1)
 # Create  predictors
-preds<-rnorm(128000)
+ preds<-rnorm(prod(c(200,10,10,8)))
 
 #Re-shape to a 4d array. First dimension corresponds to observations,
-#last to the different components of the predictor set
-dim(preds)=c(200,8,8,10) #We have ten predictors
+#last to the different components of the predictor set.
+#Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
+dim(preds)=c(200,10,10,8) 
+#We have 200 observations of eight predictors on a 10 by 10 grid.
 
 #Split predictors into linear, additive and nn. 
 
-X.train.nn=preds[,,,1:5] #Five nn predictors 
-X.train.lin=preds[,,,6:8] #Three linear predictors 
-X.train.add=preds[,,,9:10] #Two additive predictors 
+X.train.nn=preds[,,,1:4] #Four nn predictors
+X.train.lin=preds[,,,5:6] #Two linear predictors
+X.train.add=preds[,,,7:8] #Two additive predictors
 
 
 # Create response data
 
 #Contribution to scale parameter
 #Linear contribution
-m_L = 0.5*X.train.lin[,,,1]+0.3*X.train.lin[,,,2]-0.4*X.train.lin[,,,3]
+m_L = 0.5*X.train.lin[,,,1]-0.3*X.train.lin[,,,2]
 
 # Additive contribution
 m_A = 0.2*X.train.add[,,,1]^2+0.05*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
-  0.01*X.train.add[,,,2]^3
+0.1*X.train.add[,,,2]^3
 
 #Non-additive contribution - to be estimated by NN
 m_N =0.5*(exp(-4+X.train.nn[,,,2]+X.train.nn[,,,3])+
             sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,1]+X.train.nn[,,,2])-
-            cos(X.train.nn[,,,3]-X.train.nn[,,,4])*(X.train.nn[,,,2]+X.train.nn[,,,5]))
+            cos(X.train.nn[,,,3]-X.train.nn[,,,4])*(X.train.nn[,,,2]))
 
 sigma=2*exp(-2+m_L+m_A+m_N) #Exponential link
-xi=0.1 # Set xi
+xi=0.2 # Set xi
 
 #We simulate data as exceedances above some random positive threshold u. 
 u<-apply(sigma,1:3,function(x) rgpd(n=1,loc=0,scale=1,shape=0.1) ) #Random threshold
@@ -170,10 +173,10 @@ for( i in 1:dim(X.train.add)[4]) {
     #Evaluate rad at all entries to X.train.add and for all knots
   }}
 
-#Create smoothing penalty matrix for the two additive functions
+#Create smoothing penalty matrix for the two sigma additive functions
 
-# Set smoothness parameters for three functions
- lambda = c(0.5,1) 
+# Set smoothness parameters for the two functions
+lambda = c(0.1,0.2) 
 
 S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
 for(i in 1:dim(X.train.add)[4]){
@@ -192,17 +195,17 @@ X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 
 u.train <- u
 
-#Fit the GPD model for exceedances above u.train
+#Fit the GPD model for exceedances above u.train. Note that training is not run to completion.
 fit<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
                     widths=c(6,3),seed=1,S_lambda=S_lambda)
 out<-GPD.NN.predict(X.train=X.train,u.train=u.train,fit$model)
-
+hist(out$pred.sigma) #Plot histogram of predicted sigma
 print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 
 #To save model, run
 #NN.fit$model \%>\% save_model_tf("model_GPD")
-To load model, run
+#To load model, run
 #model  <- load_model_tf("model_GPD",
 #custom_objects=list("GPD_loss_S_lambda___S_lambda_"=GPD_loss(S_lambda=S_lambda)))
 

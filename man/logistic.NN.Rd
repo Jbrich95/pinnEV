@@ -81,14 +81,22 @@ The current state of the model is saved after each epoch, using \code{keras::cal
 
 # Build and train a simple MLP for toy data
 
-# Create 'nn', 'additive' and 'linear' predictors
-X.train.nn<-rnorm(5000); X.train.add<-rnorm(2000); X.train.lin<-rnorm(3000)
+set.seed(1)
+
+# Create  predictors
+preds<-rnorm(prod(c(500,12,12,10)))
 
 #Re-shape to a 4d array. First dimension corresponds to observations,
-#last to the different components of the predictor set
-dim(X.train.nn)=c(10,10,10,5) #Five nn predictors
-dim(X.train.lin)=c(10,10,10,3) #Three linear predictors
-dim(X.train.add)=c(10,10,10,2) #Two additive predictors
+#last to the different components of the predictor set.
+#Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
+dim(preds)=c(500,12,12,10) 
+#' #We have 500 observations of ten predictors on a 12 by 12 grid.
+
+#Split predictors into linear, additive and nn. 
+
+X.train.nn=preds[,,,1:5] #Five nn predictors
+X.train.lin=preds[,,,6:8] #Three linear predictors
+X.train.add=preds[,,,9:10] #Two additive predictors
 
 # Create toy response data
 
@@ -96,8 +104,8 @@ dim(X.train.add)=c(10,10,10,2) #Two additive predictors
 m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
 
 # Additive contribution
-m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^3+
-0.5*X.train.add[,,,2]^2
+  m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
+0.1*X.train.add[,,,2]^3-0.5*X.train.add[,,,2]
 
 #Non-additive contribution - to be estimated by NN
 m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
@@ -144,7 +152,7 @@ X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
  #Penalty matrix for additive functions
 
 # Set smoothness parameters for first and second additive functions
- lambda = c(0.5,1) 
+ lambda = c(0.1,0.1) 
  
 S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
 for(i in 1:dim(X.train.add)[4]){
@@ -158,13 +166,14 @@ for(i in 1:dim(X.train.add)[4]){
 X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
 "X.train.add.basis"=X.train.add.basis)
 
-#Build and train a two-layered "lin+GAM+NN" MLP
-NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
-                      batch.size=50,init.p=0.4, widths=c(6,3),
+#Build and train a two-layered "lin+GAM+NN" logistic MLP. 
+#Note that training is not run to completion.
+NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=600,
+                      batch.size=100,init.p=0.4, widths=c(6,3),
                       S_lambda=S_lambda)
 
-out<-predict_bernoulli_nn(X.train,NN.fit$model)
-hist(out$predictions) #Plot histogram of predicted probability
+out<-logistic.NN.predict(X.train,NN.fit$model)
+hist(out$pred.p) #Plot histogram of predicted probability
 print(out$lin.coeff)
 
 n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
