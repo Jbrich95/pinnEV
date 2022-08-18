@@ -73,6 +73,8 @@
 #'
 #' # Build and train a simple MLP for toy data
 #'
+#'set.seed(1)
+#'
 #' # Create  predictors
 #' preds<-rnorm(prod(c(200,10,10,8)))
 
