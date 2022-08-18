@@ -59,17 +59,24 @@
 #' @examples
 #'
 #'
-#' # Build and train a simple MLP for toy data
+#'# Build and train a simple MLP for toy data
 #'
-#' # Create 'nn', 'additive' and 'linear' predictors
-#' X.train.nn<-rnorm(5000); X.train.add<-rnorm(2000); X.train.lin<-rnorm(3000)
+#'set.seed(1)
 #'
-#' #Re-shape to a 4d array. First dimension corresponds to observations,
-#' #last to the different components of the predictor set.
-#' #Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
-#' dim(X.train.nn)=c(10,10,10,5) #Five nn predictors
-#' dim(X.train.lin)=c(10,10,10,3) #Three linear predictors
-#' dim(X.train.add)=c(10,10,10,2) #Two additive predictors
+#'# Create  predictors
+#'preds<-rnorm(prod(c(500,12,12,10)))
+#'
+#'#Re-shape to a 4d array. First dimension corresponds to observations,
+#'#last to the different components of the predictor set.
+#'#Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
+#'dim(preds)=c(500,12,12,10) 
+#'#' #We have 500 observations of ten predictors on a 12 by 12 grid.
+#'
+#Split predictors into linear, additive and nn. 
+#'
+#'X.train.nn=preds[,,,1:5] #Five nn predictors
+#'X.train.lin=preds[,,,6:8] #Three linear predictors
+#'X.train.add=preds[,,,9:10] #Two additive predictors
 #'
 #' # Create toy response data
 #'
@@ -77,8 +84,8 @@
 #' m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
 #'
 #' # Additive contribution
-#' m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^3+
-#' 0.5*X.train.add[,,,2]^2
+#' m_A = 0.2*X.train.add[,,,1]^2+0.05*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
+#' 0.1*X.train.add[,,,2]^3
 #'
 #' #Non-additive contribution - to be estimated by NN
 #' m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
@@ -88,7 +95,7 @@
 #' #We simulate normal data and estimate the median, i.e., the 50% quantile or mean,
 #' #as the form for this is known
 #' Y=apply(theta,1:3,function(x) rnorm(1,mean=x,sd=2))
-
+#'
 #'
 #' #Create training and validation, respectively.
 #' #We mask 20% of the Y values and use this for validation.
@@ -130,7 +137,7 @@
 #' #Penalty matrix for additive functions
 #' 
 #'# Set smoothness parameters for first and second additive functions
-#'  lambda = c(0.5,1) 
+#'  lambda = c(0.2,0.1) 
 #'  
 #'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
 #'for(i in 1:dim(X.train.add)[4]){
@@ -146,11 +153,11 @@
 #' "X.train.add.basis"=X.train.add.basis)
 #'
 #'#Build and train a two-layered "lin+GAM+NN" MLP. Note that training is not run to completion.
-#' NN.fit<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=500,
-#'                       batch.size=50, widths=c(6,3),S_lambda=S_lambda)
+#' NN.fit<-quant.NN.train(Y.train, Y.valid,X.train,  type="MLP",link="identity",tau=0.5,n.ep=600,
+#'                       batch.size=100, widths=c(6,3),S_lambda=S_lambda)
 #'
 #' out<-quant.NN.predict(X.train,NN.fit$model)
-#'hist(out$predictions) #Plot histogram of predicted quantiles
+#'hist(out$pred.q) #Plot histogram of predicted quantiles
 
 #' print(out$lin.coeff)
 #'
@@ -276,20 +283,20 @@ quant.NN.predict=function(X.train, model)
   X.train.lin=X.train$X.train.lin
   X.train.add.basis=X.train$X.train.add.basis
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) predictions<-model %>% predict(  list(X.train.lin,X.train.add.basis,X.train.nn))
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )    predictions<-model %>% predict( list(X.train.lin,X.train.add.basis))
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) predictions<-model %>% predict( list(X.train.lin,X.train.nn))
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) predictions<-model %>% predict( list(X.train.add.basis,X.train.nn))
-  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  predictions<-model %>% predict(list(X.train.lin))
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   predictions<-model %>% predict( list(X.train.add.basis))
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   predictions<-model %>% predict( list(X.train.nn))
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) pred.q<-model %>% predict(  list(X.train.lin,X.train.add.basis,X.train.nn))
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )    pred.q<-model %>% predict( list(X.train.lin,X.train.add.basis))
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) pred.q<-model %>% predict( list(X.train.lin,X.train.nn))
+  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) pred.q<-model %>% predict( list(X.train.add.basis,X.train.nn))
+  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pred.q<-model %>% predict(list(X.train.lin))
+  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   pred.q<-model %>% predict( list(X.train.add.basis))
+  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   pred.q<-model %>% predict( list(X.train.nn))
 
   if(!is.null(X.train.add.basis))  gam.weights<-matrix(t(model$get_layer("add_q")$get_weights()[[1]]),nrow=dim(X.train.add.basis)[length(dim(X.train.add.basis))-1],ncol=dim(X.train.add.basis)[length(dim(X.train.add.basis))],byrow=T)
 
-  if(!is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]]),"gam.weights"=gam.weights))
-  if(is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("predictions"=predictions, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]])))
-  if(!is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("predictions"=predictions,"gam.weights"=gam.weights))
-  if(is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("predictions"=predictions))
+  if(!is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("pred.q"=pred.q, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]]),"gam.weights"=gam.weights))
+  if(is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("pred.q"=pred.q, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]])))
+  if(!is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("pred.q"=pred.q,"gam.weights"=gam.weights))
+  if(is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("pred.q"=pred.q))
 
 
 }

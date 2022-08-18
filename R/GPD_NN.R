@@ -64,6 +64,7 @@
 #'
 #'#Apply model to toy data
 #'
+#'set.seed(1)
 #' # Create  predictors
 #'  preds<-rnorm(prod(c(200,10,10,8)))
 
@@ -71,7 +72,8 @@
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
 #' #last to the different components of the predictor set.
 #' #Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
-#' dim(preds)=c(200,10,10,8) #We have eight predictors
+#' dim(preds)=c(200,10,10,8) 
+#' #We have 200 observations of eight predictors on a 10 by 10 grid.
 #' 
 #' #Split predictors into linear, additive and nn. 
 #' 
@@ -88,7 +90,7 @@
 #' 
 #' # Additive contribution
 #' m_A = 0.2*X.train.add[,,,1]^2+0.05*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
-#' 0.01*X.train.add[,,,2]^3
+#' 0.1*X.train.add[,,,2]^3
 #' 
 #' #Non-additive contribution - to be estimated by NN
 #' m_N =0.5*(exp(-4+X.train.nn[,,,2]+X.train.nn[,,,3])+
@@ -177,7 +179,7 @@
 #'                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
 #'                     widths=c(6,3),seed=1,S_lambda=S_lambda)
 #' out<-GPD.NN.predict(X.train=X.train,u.train=u.train,fit$model)
-#' 
+#' hist(out$pred.sigma) #Plot histogram of predicted sigma
 #' print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 #' 
 #' #To save model, run

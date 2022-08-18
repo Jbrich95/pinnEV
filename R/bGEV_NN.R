@@ -78,7 +78,9 @@
 #' #Re-shape to a 4d array. First dimension corresponds to observations,
 #' #last to the different components of the predictor set.
 #' #Other dimensions correspond to indices of predictors, e.g., a grid of locations.
-#' dim(preds)=c(200,10,10,8) #We have eight predictors.
+#' dim(preds)=c(200,10,10,8) 
+#' #We have 200 observations of eight predictors on a 10 by 10 grid.
+
 #'
 #' #Split predictors into linear, additive and nn. Different for the location and scale parameters.
 #'X.train.nn.q=preds[,,,1:4] #Four nn predictors for q_\alpha
