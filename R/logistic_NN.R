@@ -61,14 +61,16 @@
 #'
 #'# Build and train a simple MLP for toy data
 #'
+#'set.seed(1)
+#'
 #'# Create  predictors
-#'preds<-rnorm(prod(c(200,12,12,10)))
+#'preds<-rnorm(prod(c(500,12,12,10)))
 #'
 #'#Re-shape to a 4d array. First dimension corresponds to observations,
 #'#last to the different components of the predictor set.
 #'#Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
-#'dim(preds)=c(200,12,12,10) 
-#'#' #We have 200 observations of ten predictors on a 12 by 12 grid.
+#'dim(preds)=c(500,12,12,10) 
+#'#' #We have 500 observations of ten predictors on a 12 by 12 grid.
 #'
 #'#Split predictors into linear, additive and nn. 
 #'
@@ -82,8 +84,8 @@
 #' m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
 #'
 #' # Additive contribution
-#' m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^3+
-#' 0.5*X.train.add[,,,2]^2
+#'   m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
+#' 0.1*X.train.add[,,,2]^3-0.5*X.train.add[,,,2]
 #'
 #' #Non-additive contribution - to be estimated by NN
 #' m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
@@ -130,7 +132,7 @@
 #'  #Penalty matrix for additive functions
 #' 
 #'# Set smoothness parameters for first and second additive functions
-#'  lambda = c(0.5,0.1) 
+#'  lambda = c(0.1,0.1) 
 #'  
 #'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
 #'for(i in 1:dim(X.train.add)[4]){
@@ -146,11 +148,11 @@
 #'
 #' #Build and train a two-layered "lin+GAM+NN" logistic MLP. 
 #' #Note that training is not run to completion.
-#' NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=2000,
-#'                       batch.size=50,init.p=0.4, widths=c(6,3),
+#' NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=600,
+#'                       batch.size=100,init.p=0.4, widths=c(6,3),
 #'                       S_lambda=S_lambda)
 #'
-#' out<-predict_bernoulli_nn(X.train,NN.fit$model)
+#' out<-logistic.NN.predict(X.train,NN.fit$model)
 #' hist(out$pred.p) #Plot histogram of predicted probability
 #' print(out$lin.coeff)
 #'
@@ -208,6 +210,7 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
   if(type=="CNN" & !is.null(X.train.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & !is.null(X.train.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
+  print(paste0("Training for ", n.ep," epochs with a batch size of ", batch.size))
   reticulate::use_virtualenv("myenv", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
@@ -399,24 +402,40 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
 bce.loss <- function(S_lambda=NULL){
   
   if(is.null(S_lambda)){
-  loss<-function( y_true, y_pred) {
-  
-  K <- backend()
-  p=y_pred
-  
-  obsInds=K$sign(K$relu(y_true+1e4))
-  
-  #This will change the predicted p to 0.5 where there are no observations. Will fix likelihood evaluation issues!
-  p=p-3*(1-obsInds)
-  p=K$relu(p)+0.5*(1-obsInds)
-  
-  out <- K$abs(y_true)*K$log(p)+K$abs(1-y_true)*K$log(1-p)
-  out <- -K$sum(out * obsInds)/K$sum(obsInds)
-  
-  return(out)
-  }
+   loss <- function( y_true, y_pred) {
+      
+      K <- backend()
+      p=y_pred
+      
+      obsInds=K$sign(K$relu(y_true+1e4))
+      
+      #This will change the predicted p to 0.5 where there are no observations. Will fix likelihood evaluation issues!
+      p=p-3*(1-obsInds)
+      p=K$relu(p)+0.5*(1-obsInds)
+      
+      pc=1-p
+      
+      zeroInds = 1-K$sign(K$abs(y_true))
+      
+      #This will change the predicted p to 0.5 where there are zero values in y_true. Stops issues multiplying infinity with 0 which can occur for log(p) if p very small
+      p=p-3*(zeroInds)
+      p=K$relu(p)+0.5*(zeroInds)
+      
+      
+      
+      #This will change the predicted 1-p to 0.5 where there are one values in y_true. Stops issues multiplying infinity with 0 which can occur for log(1-p) if p close to one
+      pc=pc-3*(1-zeroInds)
+      pc=K$relu(pc)+0.5*(1-zeroInds)
+      
+      out <- K$abs(y_true)*K$log(p)+K$abs(1-y_true)*K$log(pc)
+      out <- -K$sum(out * obsInds)/K$sum(obsInds)
+      
+      return(out)
+    }
+    
+ 
   }else{
-    loss<-function( y_true, y_pred) {
+    loss <- function( y_true, y_pred) {
       
       K <- backend()
       p=y_pred
@@ -433,11 +452,26 @@ bce.loss <- function(S_lambda=NULL){
       p=p-3*(1-obsInds)
       p=K$relu(p)+0.5*(1-obsInds)
       
-      out <- K$abs(y_true)*K$log(p)+K$abs(1-y_true)*K$log(1-p)
+      pc=1-p
+      
+      zeroInds = 1-K$sign(K$abs(y_true))
+      
+      #This will change the predicted p to 0.5 where there are zero values in y_true. Stops issues multiplying infinity with 0 which can occur for log(p) if p very small
+      p=p-3*(zeroInds)
+      p=K$relu(p)+0.5*(zeroInds)
+      
+      
+      
+      #This will change the predicted 1-p to 0.5 where there are one values in y_true. Stops issues multiplying infinity with 0 which can occur for log(1-p) if p close to one
+      pc=pc-3*(1-zeroInds)
+      pc=K$relu(pc)+0.5*(1-zeroInds)
+      
+      out <- K$abs(y_true)*K$log(p)+K$abs(1-y_true)*K$log(pc)
       out <- -K$sum(out * obsInds)/K$sum(obsInds)
       
       return(out+penalty)
     }
+   
     
     
   }
