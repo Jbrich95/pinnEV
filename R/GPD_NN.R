@@ -48,6 +48,8 @@
 #' both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
 #' (currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 #'
+#' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{sigma=b} and \eqb{xi=s}.
+#'
 #' The model is fitted by minimising the negative log-likelihood associated with the GPD model over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.

@@ -23,7 +23,7 @@
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
 #' Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.
-#' @param X.train.s similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.
+#' @param X.train.s similarly to \code{X.train.m}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param alpha,beta,p_a,p_b,c1,c2 hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
