@@ -40,7 +40,7 @@
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 #'  We model \eqn{\Pr \{ Y \leq y_\tau (\mathbf{x}) |\mathbf{X}=\mathbf{x}\}=\tau} with
-#' \deqn{y_\tau (\mathbf{x})=h[\eta_0+m_L\{\mathbf{x}_L\}+m_A\{x_A\}+m_N\{\mathbf{x}_N\}],} where \eqn{h} is some link-function and \eqn{\eta_0} is a
+#' \deqn{y_\tau (\mathbf{x})=h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is some link-function and \eqn{\eta_0} is a
 #' constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
 #' both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network.
 #'

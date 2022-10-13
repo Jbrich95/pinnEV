@@ -41,14 +41,14 @@
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}},
 #'  with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{(Y-u(\mathbf{x}))|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}(\sigma(\mathbf{X})),\xi;u(\mathbf{x}))} for \eqn{\xi\in(0,1)} with
-#' \deqn{\sigma (\mathbf{x})=\exp[\eta_0+m_L\{\mathbf{x}_L\}+m_A\{x_A\}+m_N\{\mathbf{x}_N\}]}
+#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with
+#' \deqn{\sigma (\mathbf{x})=\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}}
 #' where \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and
 #' \eqn{m_A} are estimated using linear functions and splines, respectively, and are
 #' both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
 #' (currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 #'
-#' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{sigma=b} and \eqb{xi=s}.
+#' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma=b} and \eqn{\xi=s}.
 #'
 #' The model is fitted by minimising the negative log-likelihood associated with the GPD model over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.

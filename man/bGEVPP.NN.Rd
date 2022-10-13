@@ -34,7 +34,7 @@ The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dim
 }
 Note that \code{X.train.q} and \code{X.train.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.}
 
-\item{X.train.s}{similarly to \code{X.train.s}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.}
+\item{X.train.s}{similarly to \code{X.train.m}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.train.q)} or \code{!is.null(X.train.s)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{u.train}{an array with the same dimension as \code{Y.train}. Gives the threshold above which the bGEV-PP model is fitted, see below. Note that \code{u.train} is applied to both \code{Y.train} and \code{Y.valid}.}
 
@@ -79,8 +79,8 @@ Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a
 For \eqn{i=1,2}, we define integers \eqn{l_i\geq 0,a_i \geq 0} and \eqn{0\leq l_i+a_i \leq d}, and let \eqn{\mathbf{X}^{(i)}_L, \mathbf{X}^{(i)}_A} and \eqn{\mathbf{X}^{(i)}_N} be distinct sub-vectors
 of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}^{(i)}_L, \mathbf{x}^{(i)}_A} and \eqn{\mathbf{x}^{(i)}_N}, respectively; the lengths of the sub-vectors are \eqn{l_i,a_i} and \eqn{d_i-l_i-a}, respectively.
 For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{bGEV-PP}(q_\alpha(\mathbf{x}),s_\beta(\mathbf{x}),\xi;u(\mathbf{x}))} for \eqn{\xi\in(0,1)} with
-\deqn{q_\alpha (\mathbf{x})=h_1[\eta^{(1)}_0+m^{(1)}_L\{\mathbf{x}^{(1)}_L\}+m^{(1)}_A\{x^{(1)}_A\}+m^{(1)}_N\{\mathbf{x}^{(1)}_N\}]} and
-\deqn{s_\beta (\mathbf{x})=\exp[\eta^{(2)}_0+m^{(2)}_L\{\mathbf{x}^{(2)}_L\}+m^{(2)}_A\{x^{(2)}_A\}+m^{(2)}_N\{\mathbf{x}^{(2)}_N\}]}
+\deqn{q_\alpha (\mathbf{x})=h_1\{\eta^{(1)}_0+m^{(1)}_L(\mathbf{x}^{(1)}_L)+m^{(1)}_A(x^{(1)}_A)+m^{(1)}_N(\mathbf{x}^{(1)}_N)\}} and
+\deqn{s_\beta (\mathbf{x})=\exp\{\eta^{(2)}_0+m^{(2)}_L(\mathbf{x}^{(2)}_L)+m^{(2)}_A(x^{(2)}_A)+m^{(2)}_N(\mathbf{x}^{(2)}_N)\}}
 where \eqn{h_1} is some link-function and \eqn{\eta^{(1)}_0,\eta^{(2)}_0} are constant intercepts. The unknown functions \eqn{m^{(1)}_L,m^{(2)}_L} and
 \eqn{m^{(1)}_A,m^{(2)}_A} are estimated using linear functions and splines, respectively, and are
 both returned as outputs by \code{bGEVPP.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} are estimated using neural networks

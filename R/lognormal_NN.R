@@ -12,7 +12,7 @@
 #' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#' @param X.train.mu  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{mu}. Must contain at least one of the following three named entries:\describe{
+#' @param X.train.mu  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{\mu}. Must contain at least one of the following three named entries:\describe{
 #' \item{\code{X.train.lin.mu}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
 #' \item{\code{X.train.add.basis.mu}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
@@ -21,11 +21,11 @@
 #' \item{\code{X.train.nn.mu}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X.train.mu} and \code{X.train.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.mu)}, then \eqn{mu} will be treated as fixed over the predictors.
-#' @param X.train.sig similarly to \code{X.train.mu}, but for modelling the shape parameter \eqn{sigma>0}. Note that we require at least one of \code{!is.null(X.train.mu)} or \code{!is.null(X.train.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.
+#' Note that \code{X.train.mu} and \code{X.train.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.mu)}, then \eqn{\mu} will be treated as fixed over the predictors.
+#' @param X.train.sig similarly to \code{X.train.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.train.mu)} or \code{!is.null(X.train.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.loc,init.sig sets the initial \eqn{mu} and \eqn{sigma} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}. Defaults to empirical estimates of mean and standard deviation, respectively, of \code{log(Y.train)}.
+#' @param init.loc,init.sig sets the initial \eqn{\mu} and \eqn{\sigma} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}. Defaults to empirical estimates of mean and standard deviation, respectively, of \code{log(Y.train)}.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial location and shape estimates are \code{init.loc} and \code{init.sig}, respectively,  across all dimensions.
@@ -42,15 +42,15 @@
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For \eqn{i=1,2}, we define integers \eqn{l_i\geq 0,a_i \geq 0} and \eqn{0\leq l_i+a_i \leq d}, and let \eqn{\mathbf{X}^{(i)}_L, \mathbf{X}^{(i)}_A} and \eqn{\mathbf{X}^{(i)}_N} be distinct sub-vectors
 #' of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}^{(i)}_L, \mathbf{x}^{(i)}_A} and \eqn{\mathbf{x}^{(i)}_N}, respectively; the lengths of the sub-vectors are \eqn{l_i,a_i} and \eqn{d_i-l_i-a}, respectively.
-#' We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Lognormal}(mu(\mathbf{x}),sigma(\mathbf{x}))} with \eqn{sigma>0} and 
-#' \deqn{mu (\mathbf{x})=h_1[\eta^{(1)}_0+m^{(1)}_L\{\mathbf{x}^{(1)}_L\}+m^{(1)}_A\{x^{(1)}_A\}+m^{(1)}_N\{\mathbf{x}^{(1)}_N\}]} and
-#' \deqn{sigma (\mathbf{x})=\exp[\eta^{(2)}_0+m^{(2)}_L\{\mathbf{x}^{(2)}_L\}+m^{(2)}_A\{x^{(2)}_A\}+m^{(2)}_N\{\mathbf{x}^{(2)}_N\}]}
+#' We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Lognormal}(\mu(\mathbf{x}),\sigma(\mathbf{x}))} with \eqn{\sigma>0} and 
+#' \deqn{\mu (\mathbf{x})=h_1\{\eta^{(1)}_0+m^{(1)}_L(\mathbf{x}^{(1)}_L)+m^{(1)}_A(x^{(1)}_A)+m^{(1)}_N(\mathbf{x}^{(1)}_N)\}} and
+#' \deqn{\sigma (\mathbf{x})=\exp\{\eta^{(2)}_0+m^{(2)}_L(\mathbf{x}^{(2)}_L)+m^{(2)}_A(x^{(2)}_A)+m^{(2)}_N(\mathbf{x}^{(2)}_N)\}}
 #' where \eqn{h_1} is some link-function and \eqn{\eta^{(1)}_0,\eta^{(2)}_0} are constant intercepts. The unknown functions \eqn{m^{(1)}_L,m^{(2)}_L} and
 #' \eqn{m^{(1)}_A,m^{(2)}_A} are estimated using linear functions and splines, respectively, and are
 #' both returned as outputs by \code{lognormal.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} are estimated using neural networks
 #' (currently the same architecture is used for both parameters). 
 #'
-#' For details of the lognormal parameterisation, see \code{help(Lognormal)}. 
+#' For details of the log-normal parameterisation, see \code{help(Lognormal)}. 
 #'
 #' The model is fitted by minimising the negative log-likelihood associated with the lognormal distribution plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
@@ -173,7 +173,9 @@
 #'# Set smoothness parameters for two functions
 #'  lambda = c(0.1,0.2) 
 #'
-#' S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.train.add.mu)[4],ncol=n.knot.mu*dim(X.train.add.mu)[4])
+#' S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.train.add.mu)[4],
+#' ncol=n.knot.mu*dim(X.train.add.mu)[4])
+#' 
 #'for(i in 1:dim(X.train.add.mu)[4]){
 #'  for(j in 1:n.knot.mu){
 #'   for(k in 1:n.knot.mu){
@@ -183,13 +185,17 @@
 #'}
 #'
 #' #Get knots for sigma predictor
+#' 
 #' knots.sig=matrix(nrow=dim(X.train.add.sig)[4],ncol=n.knot.sig)
+#' 
 #' for( i in 1:dim(X.train.add.sig)[4]){
 #'  knots.sig[i,]=quantile(X.train.add.sig[,,,i],probs=seq(0,1,length=n.knot.sig))
 #' }
 #'
 #' #Evaluate radial basis functions for sigma predictor
+#' 
 #' X.train.add.basis.sig<-array(dim=c(dim(X.train.add.sig),n.knot.sig))
+#' 
 #' for( i in 1:dim(X.train.add.sig)[4]) {
 #'   for(k in 1:n.knot.sig) {
 #'     X.train.add.basis.sig[,,,i,k]= rad(x=X.train.add.sig[,,,i],c=knots.sig[i,k])
@@ -201,7 +207,9 @@
 #'# Set smoothness parameter
 #'  lambda = c(0.2) 
 #'
-#' S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.train.add.sig)[4],ncol=n.knot.sig*dim(X.train.add.sig)[4])
+#' S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.train.add.sig)[4],
+#' ncol=n.knot.sig*dim(X.train.add.sig)[4])
+#' 
 #'for(i in 1:dim(X.train.add.sig)[4]){
 #'  for(j in 1:n.knot.sig){
 #'   for(k in 1:n.knot.sig){
