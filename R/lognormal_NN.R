@@ -12,17 +12,17 @@
 #' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#' @param X.train.mu  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{\mu}. Must contain at least one of the following three named entries:\describe{
-#' \item{\code{X.train.lin.mu}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+#' @param X.mu  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{\mu}. Must contain at least one of the following three named entries:\describe{
+#' \item{\code{X.lin.mu}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
-#' \item{\code{X.train.add.basis.mu}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+#' \item{\code{X.add.basis.mu}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a_1\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 #' If \code{NULL}, a model without the additive component is built and trained.}
-#' \item{\code{X.train.nn.mu}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
+#' \item{\code{X.nn.mu}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X.train.mu} and \code{X.train.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.mu)}, then \eqn{\mu} will be treated as fixed over the predictors.
-#' @param X.train.sig similarly to \code{X.train.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.train.mu)} or \code{!is.null(X.train.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.
+#' Note that \code{X.mu} and \code{X.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.mu)}, then \eqn{\mu} will be treated as fixed over the predictors.
+#' @param X.sig similarly to \code{X.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.mu)} or \code{!is.null(X.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
 #' @param init.loc,init.sig sets the initial \eqn{\mu} and \eqn{\sigma} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}. Defaults to empirical estimates of mean and standard deviation, respectively, of \code{log(Y.train)}.
@@ -34,7 +34,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda List of smoothing penalty matrices for the splines modelling the effects of \code{X.train.add.basis.mu} and \code{X.train.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.train.add.basis.mu)} and \code{!is.null(X.train.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.train.add.basis.mu)}; similarly for the second element and \code{!is.null(X.train.add.basis.sig)}. 
+#' @param S_lambda List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.mu)}; similarly for the second element and \code{!is.null(X.add.basis.sig)}. 
 
 #'@name lognormal.NN
 
@@ -80,44 +80,44 @@
 
 #'
 #' #Split predictors into linear, additive and nn. Different for the location and shape parameters.
-#'X.train.nn.mu=preds[,,,1:4] #Four nn predictors for mu
-#'X.train.lin.mu=preds[,,,5:6] #Two additive predictors for mu
-#'X.train.add.mu=preds[,,,7:8] #Two additive predictors for mu
+#'X.nn.mu=preds[,,,1:4] #Four nn predictors for mu
+#'X.lin.mu=preds[,,,5:6] #Two additive predictors for mu
+#'X.add.mu=preds[,,,7:8] #Two additive predictors for mu
 #'
-#'X.train.nn.sig=preds[,,,1:2] #Two nn predictors for sigma
-#'X.train.lin.sig=preds[,,,3] #One linear predictor for sigma
-#'dim(X.train.lin.sig)=c(dim(X.train.lin.sig),1) #Change dimension so consistent
-#'X.train.add.sig=preds[,,,4] #One additive predictor for sigma
-#'dim(X.train.add.sig)=c(dim(X.train.add.sig),1) #Change dimension so consistent
+#'X.nn.sig=preds[,,,1:2] #Two nn predictors for sigma
+#'X.lin.sig=preds[,,,3] #One linear predictor for sigma
+#'dim(X.lin.sig)=c(dim(X.lin.sig),1) #Change dimension so consistent
+#'X.add.sig=preds[,,,4] #One additive predictor for sigma
+#'dim(X.add.sig)=c(dim(X.add.sig),1) #Change dimension so consistent
 #'
 #'
 #' # Create toy response data
 #' 
 #' #Contribution to location parameter
 #' #Linear contribution
-#' m_L_1 = 0.3*X.train.lin.mu[,,,1]+0.6*X.train.lin.mu[,,,2]
+#' m_L_1 = 0.3*X.lin.mu[,,,1]+0.6*X.lin.mu[,,,2]
 #' 
 #' # Additive contribution
-#' m_A_1 = 0.05*X.train.add.mu[,,,1]^3+0.2*X.train.add.mu[,,,1]-
-#'  0.05*X.train.add.mu[,,,2]^3+0.5*X.train.add.mu[,,,2]^2
+#' m_A_1 = 0.05*X.add.mu[,,,1]^3+0.2*X.add.mu[,,,1]-
+#'  0.05*X.add.mu[,,,2]^3+0.5*X.add.mu[,,,2]^2
 #' 
 #' #Non-additive contribution - to be estimated by NN
-#' m_N_1 = 0.25*exp(-3+X.train.nn.mu[,,,4]+X.train.nn.mu[,,,1])+
-#'   sin(X.train.nn.mu[,,,1]-X.train.nn.mu[,,,2])*(X.train.nn.mu[,,,4]+X.train.nn.mu[,,,2])-
-#'   cos(X.train.nn.mu[,,,4]-X.train.nn.mu[,,,1])*(X.train.nn.mu[,,,3]+X.train.nn.mu[,,,1])
+#' m_N_1 = 0.25*exp(-3+X.nn.mu[,,,4]+X.nn.mu[,,,1])+
+#'   sin(X.nn.mu[,,,1]-X.nn.mu[,,,2])*(X.nn.mu[,,,4]+X.nn.mu[,,,2])-
+#'   cos(X.nn.mu[,,,4]-X.nn.mu[,,,1])*(X.nn.mu[,,,3]+X.nn.mu[,,,1])
 #' 
 #' mu=m_L_1+m_A_1+m_N_1 #Identity link
 #' 
 #' #Contribution to shape parameter
 #' #Linear contribution
-#' m_L_2 = 0.5*X.train.lin.sig[,,,1]
+#' m_L_2 = 0.5*X.lin.sig[,,,1]
 #' 
 #' # Additive contribution
-#' m_A_2 = 0.1*X.train.add.sig[,,,1]^2+0.2*X.train.add.sig[,,,1]
+#' m_A_2 = 0.1*X.add.sig[,,,1]^2+0.2*X.add.sig[,,,1]
 #' 
 #' #Non-additive contribution - to be estimated by NN
-#' m_N_2 = 0.1*exp(-4+X.train.nn.sig[,,,2]+X.train.nn.sig[,,,1])+
-#'   0.1* sin(X.train.nn.sig[,,,1]-X.train.nn.sig[,,,2])*(X.train.nn.sig[,,,1]+X.train.nn.sig[,,,2])
+#' m_N_2 = 0.1*exp(-4+X.nn.sig[,,,2]+X.nn.sig[,,,1])+
+#'   0.1* sin(X.nn.sig[,,,1]-X.nn.sig[,,,2])*(X.nn.sig[,,,1]+X.nn.sig[,,,2])
 #' 
 #' sig=0.1*exp(m_L_2+m_A_2+m_N_2) #Exponential link
 #' 
@@ -141,7 +141,7 @@
 #'
 #'
 #' #To build a model with an additive component, we require an array of evaluations of
-#' #the basis functions for each pre-specified knot and entry to X.train.add.mu and X.train.add.sig
+#' #the basis functions for each pre-specified knot and entry to X.add.mu and X.add.sig
 #'
 #'rad=function(x,c){ #Define a basis function. Here we use the radial bases
 #'   out=abs(x-c)^2*log(abs(x-c))
@@ -154,18 +154,18 @@
 #'#but can differ between the parameters mu and sigma
 #'
 #' #Get knots for mu predictors
-#' knots.mu=matrix(nrow=dim(X.train.add.mu)[4],ncol=n.knot.mu)
+#' knots.mu=matrix(nrow=dim(X.add.mu)[4],ncol=n.knot.mu)
 #'
 #' #We set knots to be equally-spaced marginal quantiles
-#' for( i in 1:dim(X.train.add.mu)[4]){
-#' knots.mu[i,]=quantile(X.train.add.mu[,,,i],probs=seq(0,1,length=n.knot.mu))
+#' for( i in 1:dim(X.add.mu)[4]){
+#' knots.mu[i,]=quantile(X.add.mu[,,,i],probs=seq(0,1,length=n.knot.mu))
 #' }
 #' #Evaluate radial basis functions for mu predictors
-#' X.train.add.basis.mu<-array(dim=c(dim(X.train.add.mu),n.knot.mu))
-#' for( i in 1:dim(X.train.add.mu)[4]) {
+#' X.add.basis.mu<-array(dim=c(dim(X.add.mu),n.knot.mu))
+#' for( i in 1:dim(X.add.mu)[4]) {
 #'   for(k in 1:n.knot.mu) {
-#'     X.train.add.basis.mu[,,,i,k]= rad(x=X.train.add.mu[,,,i],c=knots.mu[i,k])
-#'     #Evaluate rad at all entries to X.train.add.mu and for all knots
+#'     X.add.basis.mu[,,,i,k]= rad(x=X.add.mu[,,,i],c=knots.mu[i,k])
+#'     #Evaluate rad at all entries to X.add.mu and for all knots
 #'   }}
 #'   
 #'   #'#Create smoothing penalty matrix for the two q_alpha additive functions
@@ -173,10 +173,10 @@
 #'# Set smoothness parameters for two functions
 #'  lambda = c(0.1,0.2) 
 #'
-#' S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.train.add.mu)[4],
-#' ncol=n.knot.mu*dim(X.train.add.mu)[4])
+#' S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.add.mu)[4],
+#' ncol=n.knot.mu*dim(X.add.mu)[4])
 #' 
-#'for(i in 1:dim(X.train.add.mu)[4]){
+#'for(i in 1:dim(X.add.mu)[4]){
 #'  for(j in 1:n.knot.mu){
 #'   for(k in 1:n.knot.mu){
 #'      S_lambda.mu[(j+(i-1)*n.knot.mu),(k+(i-1)*n.knot.mu)]=lambda[i]*rad(knots.mu[i,j],knots.mu[i,k])
@@ -186,20 +186,20 @@
 #'
 #' #Get knots for sigma predictor
 #' 
-#' knots.sig=matrix(nrow=dim(X.train.add.sig)[4],ncol=n.knot.sig)
+#' knots.sig=matrix(nrow=dim(X.add.sig)[4],ncol=n.knot.sig)
 #' 
-#' for( i in 1:dim(X.train.add.sig)[4]){
-#'  knots.sig[i,]=quantile(X.train.add.sig[,,,i],probs=seq(0,1,length=n.knot.sig))
+#' for( i in 1:dim(X.add.sig)[4]){
+#'  knots.sig[i,]=quantile(X.add.sig[,,,i],probs=seq(0,1,length=n.knot.sig))
 #' }
 #'
 #' #Evaluate radial basis functions for sigma predictor
 #' 
-#' X.train.add.basis.sig<-array(dim=c(dim(X.train.add.sig),n.knot.sig))
+#' X.add.basis.sig<-array(dim=c(dim(X.add.sig),n.knot.sig))
 #' 
-#' for( i in 1:dim(X.train.add.sig)[4]) {
+#' for( i in 1:dim(X.add.sig)[4]) {
 #'   for(k in 1:n.knot.sig) {
-#'     X.train.add.basis.sig[,,,i,k]= rad(x=X.train.add.sig[,,,i],c=knots.sig[i,k])
-#'     #Evaluate rad at all entries to X.train.add.mu and for all knots
+#'     X.add.basis.sig[,,,i,k]= rad(x=X.add.sig[,,,i],c=knots.sig[i,k])
+#'     #Evaluate rad at all entries to X.add.mu and for all knots
 #'   }}
 #'
 #'#Create smoothing penalty matrix for the s_beta additive function
@@ -207,10 +207,10 @@
 #'# Set smoothness parameter
 #'  lambda = c(0.2) 
 #'
-#' S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.train.add.sig)[4],
-#' ncol=n.knot.sig*dim(X.train.add.sig)[4])
+#' S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.add.sig)[4],
+#' ncol=n.knot.sig*dim(X.add.sig)[4])
 #' 
-#'for(i in 1:dim(X.train.add.sig)[4]){
+#'for(i in 1:dim(X.add.sig)[4]){
 #'  for(j in 1:n.knot.sig){
 #'   for(k in 1:n.knot.sig){
 #'      S_lambda.sig[(j+(i-1)*n.knot.sig),(k+(i-1)*n.knot.sig)]=lambda[i]*rad(knots.sig[i,j],knots.sig[i,k])
@@ -223,17 +223,17 @@
 #'
 #'
 #' #lin+GAM+NN models defined for both location and scale parameters
-#' X.train.mu=list("X.train.nn.mu"=X.train.nn.mu, "X.train.lin.mu"=X.train.lin.mu,
-#'                "X.train.add.basis.mu"=X.train.add.basis.mu) #Predictors for mu
-#' X.train.sig=list("X.train.nn.sig"=X.train.nn.sig, "X.train.lin.sig"=X.train.lin.sig,
-#'                "X.train.add.basis.sig"=X.train.add.basis.sig) #Predictors for sigma
+#' X.mu=list("X.nn.mu"=X.nn.mu, "X.lin.mu"=X.lin.mu,
+#'                "X.add.basis.mu"=X.add.basis.mu) #Predictors for mu
+#' X.sig=list("X.nn.sig"=X.nn.sig, "X.lin.sig"=X.lin.sig,
+#'                "X.add.basis.sig"=X.add.basis.sig) #Predictors for sigma
 #'
 #'
 #' #Fit the log-normal model. Note that training is not run to completion.
-#' NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.train.mu,X.train.sig, type="MLP",link.loc="identity",
+#' NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.mu,X.sig, type="MLP",link.loc="identity",
 #'                           n.ep=50, batch.size=50,
 #'                           widths=c(6,3),seed=1,S_lambda=S_lambda)
-#' out<-lognormal.NN.predict(X.train.mu=X.train.mu,X.train.sig=X.train.sig,NN.fit$model)
+#' out<-lognormal.NN.predict(X.mu=X.mu,X.sig=X.sig,NN.fit$model)
 #'
 #' print("mu linear coefficients: "); print(round(out$lin.coeff_loc,3))
 #' print("sig linear coefficients: "); print(round(out$lin.coeff_sig,3))
@@ -254,7 +254,7 @@
 #' # Plot splines for the additive predictors
 #'
 #' #Location predictors
-#' n.add.preds_loc=dim(X.train.add.mu)[length(dim(X.train.add.mu))]
+#' n.add.preds_loc=dim(X.add.mu)[length(dim(X.add.mu))]
 #' par(mfrow=c(1,n.add.preds_loc))
 #' for(i in 1:n.add.preds_loc){
 #'   plt.x=seq(from=min(knots.mu[i,]),to=max(knots.mu[i,]),length=1000)  #Create sequence for x-axis
@@ -271,7 +271,7 @@
 #' }
 #'
 #' #Shape predictors
-#' n.add.preds_sig=dim(X.train.add.sig)[length(dim(X.train.add.sig))]
+#' n.add.preds_sig=dim(X.add.sig)[length(dim(X.add.sig))]
 #' par(mfrow=c(1,n.add.preds_sig))
 #' for(i in 1:n.add.preds_sig){
 #'   plt.x=seq(from=min(knots.sig[i,]),to=max(knots.sig[i,]),length=1000)  #Create sequence for x-axis
@@ -291,7 +291,7 @@
 #' @rdname lognormal.NN
 #' @export
 
-lognormal.NN.train=function(Y.train, Y.valid = NULL,X.train.mu,X.train.sig, type="MLP",link.loc="identity",
+lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.loc="identity",
                        n.ep=100, batch.size=100,init.loc=NULL, init.sig=NULL,
                        widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
 {
@@ -300,7 +300,7 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.train.mu,X.train.sig, type
   if(min(Y.train[Y.train > -1e4])<=0 | min(Y.valid[Y.valid > -1e4])<=0 ) stop("Reponse data must be strictly positive!")
   
   
-  if(is.null(X.train.mu) &  is.null(X.train.sig)  ) stop("No predictors provided for mu or sigma: Stationary models are not permitted ")
+  if(is.null(X.mu) &  is.null(X.sig)  ) stop("No predictors provided for mu or sigma: Stationary models are not permitted ")
   if(is.null(Y.train)) stop("No training response data provided")
   
   if(is.null(init.loc) & is.null(init.wb_path)  ) init.loc=mean(log(Y.train[Y.train>0]))
@@ -308,52 +308,52 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.train.mu,X.train.sig, type
   
   
   print(paste0("Creating log-normal model"))
-  X.train.nn.mu=X.train.mu$X.train.nn.mu
-  X.train.lin.mu=X.train.mu$X.train.lin.mu
-  X.train.add.basis.mu=X.train.mu$X.train.add.basis.mu
+  X.nn.mu=X.mu$X.nn.mu
+  X.lin.mu=X.mu$X.lin.mu
+  X.add.basis.mu=X.mu$X.add.basis.mu
   
   
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) ) {  train.data= list(X.train.lin.mu,X.train.add.basis.mu,X.train.nn.mu); print("Defining lin+GAM+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.train.lin.mu,add_input_loc=X.train.add.basis.mu,  nn_input_loc=X.train.nn.mu),Y.valid)}
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) ) {   train.data= list(X.train.lin.mu,X.train.add.basis.mu); print("Defining lin+GAM model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.train.lin.mu,add_input_loc=X.train.add.basis.mu),Y.valid)}
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) ) { train.data= list(X.train.lin.mu,X.train.nn.mu); print("Defining lin+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.train.lin.mu, nn_input_loc=X.train.nn.mu),Y.valid)}
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) ) {train.data= list(X.train.add.basis.mu,X.train.nn.mu); print("Defining GAM+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_loc=X.train.add.basis.mu,  nn_input_loc=X.train.nn.mu),Y.valid)}
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )   {train.data= list(X.train.lin.mu); print("Defining fully-linear model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.train.lin.mu),Y.valid)}
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   {train.data= list(X.train.add.basis.mu); print("Defining fully-additive model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_loc=X.train.add.basis.mu),Y.valid)}
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   {train.data= list(X.train.nn.mu); print("Defining fully-NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_loc=X.train.nn.mu),Y.valid)}
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   {train.data= list(); print("Defining stationary model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) ) {  train.data= list(X.lin.mu,X.add.basis.mu,X.nn.mu); print("Defining lin+GAM+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.lin.mu,add_input_loc=X.add.basis.mu,  nn_input_loc=X.nn.mu),Y.valid)}
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) ) {   train.data= list(X.lin.mu,X.add.basis.mu); print("Defining lin+GAM model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.lin.mu,add_input_loc=X.add.basis.mu),Y.valid)}
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) ) { train.data= list(X.lin.mu,X.nn.mu); print("Defining lin+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.lin.mu, nn_input_loc=X.nn.mu),Y.valid)}
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) ) {train.data= list(X.add.basis.mu,X.nn.mu); print("Defining GAM+NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_loc=X.add.basis.mu,  nn_input_loc=X.nn.mu),Y.valid)}
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) )   {train.data= list(X.lin.mu); print("Defining fully-linear model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_loc=X.lin.mu),Y.valid)}
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(X.add.basis.mu); print("Defining fully-additive model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_loc=X.add.basis.mu),Y.valid)}
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(X.nn.mu); print("Defining fully-NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_loc=X.nn.mu),Y.valid)}
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(); print("Defining stationary model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   
   S_lambda.mu=S_lambda$S_lambda.mu
   if(is.null(S_lambda.mu)){print("No smoothing penalty used for mu")}
-  if(is.null(X.train.add.basis.mu)){S_lambda.mu=NULL}
+  if(is.null(X.add.basis.mu)){S_lambda.mu=NULL}
   
-  X.train.nn.sig=X.train.sig$X.train.nn.sig
-  X.train.lin.sig=X.train.sig$X.train.lin.sig
-  X.train.add.basis.sig=X.train.sig$X.train.add.basis.sig
+  X.nn.sig=X.sig$X.nn.sig
+  X.lin.sig=X.sig$X.lin.sig
+  X.add.basis.sig=X.sig$X.add.basis.sig
   
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) ) {  train.data= c(train.data,list(X.train.lin.sig,X.train.add.basis.sig,X.train.nn.sig)); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.sig,add_input_s=X.train.add.basis.sig,  nn_input_s=X.train.nn.sig)),Y.valid)}
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) ) {   train.data= c(train.data,list(X.train.lin.sig,X.train.add.basis.sig)); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.sig,add_input_s=X.train.add.basis.sig)),Y.valid)}
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) ) { train.data= c(train.data,list(X.train.lin.sig,X.train.nn.sig)); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.sig, nn_input_s=X.train.nn.sig)),Y.valid)}
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) ) {train.data= c(train.data,list(X.train.add.basis.sig,X.train.nn.sig)); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.train.add.basis.sig,  nn_input_s=X.train.nn.sig)),Y.valid)}
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )   {train.data= c(train.data,list(X.train.lin.sig)); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.train.lin.sig)),Y.valid)}
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )   {train.data= c(train.data,list(X.train.add.basis.sig)); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.train.add.basis.sig)),Y.valid)}
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )   {train.data= c(train.data,list(X.train.nn.sig)); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.train.nn.sig)),Y.valid)}
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )   {train.data= train.data; print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=validation.data}
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) ) {  train.data= c(train.data,list(X.lin.sig,X.add.basis.sig,X.nn.sig)); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.lin.sig,add_input_s=X.add.basis.sig,  nn_input_s=X.nn.sig)),Y.valid)}
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) ) {   train.data= c(train.data,list(X.lin.sig,X.add.basis.sig)); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.lin.sig,add_input_s=X.add.basis.sig)),Y.valid)}
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) ) { train.data= c(train.data,list(X.lin.sig,X.nn.sig)); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.lin.sig, nn_input_s=X.nn.sig)),Y.valid)}
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) ) {train.data= c(train.data,list(X.add.basis.sig,X.nn.sig)); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.add.basis.sig,  nn_input_s=X.nn.sig)),Y.valid)}
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) )   {train.data= c(train.data,list(X.lin.sig)); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(lin_input_s=X.lin.sig)),Y.valid)}
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= c(train.data,list(X.add.basis.sig)); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(add_input_s=X.add.basis.sig)),Y.valid)}
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= c(train.data,list(X.nn.sig)); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.nn.sig)),Y.valid)}
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= train.data; print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
   S_lambda.sig=S_lambda$S_lambda.sig
   if(is.null(S_lambda.sig)){print("No smoothing penalty used for sigma")}
-  if(is.null(X.train.add.basis.sig)){S_lambda.sig=NULL}
+  if(is.null(X.add.basis.sig)){S_lambda.sig=NULL}
   
   S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)
   
-  if(type=="CNN" & (!is.null(X.train.nn.mu) | !is.null(X.train.nn.sig)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
-  if(type=="MLP"  & (!is.null(X.train.nn.mu) | !is.null(X.train.nn.sig)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
+  if(type=="CNN" & (!is.null(X.nn.mu) | !is.null(X.nn.sig)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="MLP"  & (!is.null(X.nn.mu) | !is.null(X.nn.sig)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   
   reticulate::use_virtualenv("myenv", required = T)
   
   if(!is.null(seed)) tf$random$set_seed(seed)
   
-  model<-lognormal.NN.build(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
-                       X.train.nn.sig,X.train.lin.sig,X.train.add.basis.sig,
+  model<-lognormal.NN.build(X.nn.mu,X.lin.mu,X.add.basis.mu,
+                       X.nn.sig,X.lin.sig,X.add.basis.sig,
                        type, init.loc,init.sig, widths,filter.dim,link.loc)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
@@ -401,39 +401,39 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.train.mu,X.train.sig, type
 #' @rdname lognormal.NN
 #' @export
 #'
-lognormal.NN.predict=function(X.train.mu,X.train.sig, model)
+lognormal.NN.predict=function(X.mu,X.sig, model)
 {
   library(tensorflow)
-  if(is.null(X.train.mu) &  is.null(X.train.sig)  ) stop("No predictors provided for mu or sigma: Stationary models are not permitted ")
+  if(is.null(X.mu) &  is.null(X.sig)  ) stop("No predictors provided for mu or sigma: Stationary models are not permitted ")
   
   
   
-  X.train.nn.mu=X.train.mu$X.train.nn.mu
-  X.train.lin.mu=X.train.mu$X.train.lin.mu
-  X.train.add.basis.mu=X.train.mu$X.train.add.basis.mu
+  X.nn.mu=X.mu$X.nn.mu
+  X.lin.mu=X.mu$X.lin.mu
+  X.add.basis.mu=X.mu$X.add.basis.mu
   
   
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )   train.data= list(X.train.lin.mu,X.train.add.basis.mu,X.train.nn.mu)
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )   train.data= list(X.train.lin.mu,X.train.add.basis.mu)
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )  train.data= list(X.train.lin.mu,X.train.nn.mu)
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) ) train.data= list(X.train.add.basis.mu,X.train.nn.mu)
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )   train.data= list(X.train.lin.mu)
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   train.data= list(X.train.add.basis.mu)
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   train.data= list(X.train.nn.mu)
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )   train.data= list()
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) )   train.data= list(X.lin.mu,X.add.basis.mu,X.nn.mu)
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) )   train.data= list(X.lin.mu,X.add.basis.mu)
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) )  train.data= list(X.lin.mu,X.nn.mu)
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) ) train.data= list(X.add.basis.mu,X.nn.mu)
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) )   train.data= list(X.lin.mu)
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) )   train.data= list(X.add.basis.mu)
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   train.data= list(X.nn.mu)
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   train.data= list()
   
-  X.train.nn.sig=X.train.sig$X.train.nn.sig
-  X.train.lin.sig=X.train.sig$X.train.lin.sig
-  X.train.add.basis.sig=X.train.sig$X.train.add.basis.sig
+  X.nn.sig=X.sig$X.nn.sig
+  X.lin.sig=X.sig$X.lin.sig
+  X.add.basis.sig=X.sig$X.add.basis.sig
   
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )   train.data= c(train.data,list(X.train.lin.sig,X.train.add.basis.sig,X.train.nn.sig))
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )   train.data= c(train.data,list(X.train.lin.sig,X.train.add.basis.sig))
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )  train.data= c(train.data,list(X.train.lin.sig,X.train.nn.sig))
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) ) train.data= c(train.data,list(X.train.add.basis.sig,X.train.nn.sig))
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )   train.data= c(train.data,list(X.train.lin.sig))
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )   train.data= c(train.data,list(X.train.add.basis.sig))
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) ) train.data= c(train.data,list(X.train.nn.sig))
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) ) train.data= train.data
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) )   train.data= c(train.data,list(X.lin.sig,X.add.basis.sig,X.nn.sig))
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) )   train.data= c(train.data,list(X.lin.sig,X.add.basis.sig))
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) )  train.data= c(train.data,list(X.lin.sig,X.nn.sig))
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) ) train.data= c(train.data,list(X.add.basis.sig,X.nn.sig))
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) )   train.data= c(train.data,list(X.lin.sig))
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) )   train.data= c(train.data,list(X.add.basis.sig))
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) ) train.data= c(train.data,list(X.nn.sig))
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) ) train.data= train.data
   
   
   predictions<-model %>% predict( train.data)
@@ -441,37 +441,37 @@ lognormal.NN.predict=function(X.train.mu,X.train.sig, model)
   pred.loc=k_get_value(predictions[all_dims(),1])
   pred.sig=k_get_value(predictions[all_dims(),2])
 
-  if(!is.null(X.train.add.basis.mu))  gam.weights_loc<-matrix(t(model$get_layer("add_loc")$get_weights()[[1]]),nrow=dim(X.train.add.basis.mu)[length(dim(X.train.add.basis.mu))-1],ncol=dim(X.train.add.basis.mu)[length(dim(X.train.add.basis.mu))],byrow=T)
-  if(!is.null(X.train.add.basis.sig))  gam.weights_sig<-matrix(t(model$get_layer("add_s")$get_weights()[[1]]),nrow=dim(X.train.add.basis.sig)[length(dim(X.train.add.basis.sig))-1],ncol=dim(X.train.add.basis.sig)[length(dim(X.train.add.basis.sig))],byrow=T)
+  if(!is.null(X.add.basis.mu))  gam.weights_loc<-matrix(t(model$get_layer("add_loc")$get_weights()[[1]]),nrow=dim(X.add.basis.mu)[length(dim(X.add.basis.mu))-1],ncol=dim(X.add.basis.mu)[length(dim(X.add.basis.mu))],byrow=T)
+  if(!is.null(X.add.basis.sig))  gam.weights_sig<-matrix(t(model$get_layer("add_s")$get_weights()[[1]]),nrow=dim(X.add.basis.sig)[length(dim(X.add.basis.sig))-1],ncol=dim(X.add.basis.sig)[length(dim(X.add.basis.sig))],byrow=T)
   
   out=list("pred.loc"=pred.loc,"pred.sig"=pred.sig)
-  if(!is.null(X.train.lin.mu) ) out=c(out,list("lin.coeff_loc"=c(model$get_layer("lin_loc")$get_weights()[[1]])))
-  if(!is.null(X.train.lin.sig) ) out=c(out,list("lin.coeff_sig"=c(model$get_layer("lin_s")$get_weights()[[1]])))
-  if(!is.null(X.train.add.basis.mu) ) out=c(out,list("gam.weights_loc"=gam.weights_loc))
-  if(!is.null(X.train.add.basis.sig) ) out=c(out,list("gam.weights_sig"=gam.weights_sig))
+  if(!is.null(X.lin.mu) ) out=c(out,list("lin.coeff_loc"=c(model$get_layer("lin_loc")$get_weights()[[1]])))
+  if(!is.null(X.lin.sig) ) out=c(out,list("lin.coeff_sig"=c(model$get_layer("lin_s")$get_weights()[[1]])))
+  if(!is.null(X.add.basis.mu) ) out=c(out,list("gam.weights_loc"=gam.weights_loc))
+  if(!is.null(X.add.basis.sig) ) out=c(out,list("gam.weights_sig"=gam.weights_sig))
   
   return(out)
   
 }
 #'
 #'
-lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
-                       X.train.nn.sig,X.train.lin.sig,X.train.add.basis.sig,
+lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
+                       X.nn.sig,X.lin.sig,X.add.basis.sig,
                        type, init.loc,init.sig, widths,filter.dim,link.loc)
 {
   #Additive inputs
-  if(!is.null(X.train.add.basis.mu))  input_add_loc<- layer_input(shape = dim(X.train.add.basis.mu)[-1], name = 'add_input_loc')
-  if(!is.null(X.train.add.basis.sig))  input_add_s<- layer_input(shape = dim(X.train.add.basis.sig)[-1], name = 'add_input_s')
+  if(!is.null(X.add.basis.mu))  input_add_loc<- layer_input(shape = dim(X.add.basis.mu)[-1], name = 'add_input_loc')
+  if(!is.null(X.add.basis.sig))  input_add_s<- layer_input(shape = dim(X.add.basis.sig)[-1], name = 'add_input_s')
   
   #NN input
   
-  if(!is.null(X.train.nn.mu))   input_nn_loc <- layer_input(shape = dim(X.train.nn.mu)[-1], name = 'nn_input_loc')
-  if(!is.null(X.train.nn.sig))   input_nn_s <- layer_input(shape = dim(X.train.nn.sig)[-1], name = 'nn_input_s')
+  if(!is.null(X.nn.mu))   input_nn_loc <- layer_input(shape = dim(X.nn.mu)[-1], name = 'nn_input_loc')
+  if(!is.null(X.nn.sig))   input_nn_s <- layer_input(shape = dim(X.nn.sig)[-1], name = 'nn_input_s')
   
   #Linear input
   
-  if(!is.null(X.train.lin.mu)) input_lin_loc <- layer_input(shape = dim(X.train.lin.mu)[-1], name = 'lin_input_loc')
-  if(!is.null(X.train.lin.sig)) input_lin_s <- layer_input(shape = dim(X.train.lin.sig)[-1], name = 'lin_input_s')
+  if(!is.null(X.lin.mu)) input_lin_loc <- layer_input(shape = dim(X.lin.mu)[-1], name = 'lin_input_loc')
+  if(!is.null(X.lin.sig)) input_lin_s <- layer_input(shape = dim(X.lin.sig)[-1], name = 'lin_input_s')
   
 
   
@@ -481,7 +481,7 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
   #NN towers
   
   #Location
-  if(!is.null(X.train.nn.mu)){
+  if(!is.null(X.nn.mu)){
     
     nunits=c(widths,1)
     n.layers=length(nunits)-1
@@ -490,12 +490,12 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
     if(type=="MLP"){
       for(i in 1:n.layers){
         nnBranchloc <- nnBranchloc  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                                input_shape =dim(X.train.nn.mu)[-1], name = paste0('nn_loc_dense',i) )
+                                                input_shape =dim(X.nn.mu)[-1], name = paste0('nn_loc_dense',i) )
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchloc <- nnBranchloc  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                  input_shape =dim(X.train.nn.mu)[-1], name = paste0('nn_loc_cnn',i) )
+                                                  input_shape =dim(X.nn.mu)[-1], name = paste0('nn_loc_cnn',i) )
       }
       
     }
@@ -505,7 +505,7 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
     
   }
   #Shape
-  if(!is.null(X.train.nn.sig)){
+  if(!is.null(X.nn.sig)){
     
     nunits=c(widths,1)
     n.layers=length(nunits)-1
@@ -514,12 +514,12 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
     if(type=="MLP"){
       for(i in 1:n.layers){
         nnBranchs <- nnBranchs  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                                input_shape =dim(X.train.nn.sig)[-1], name = paste0('nn_s_dense',i) )
+                                                input_shape =dim(X.nn.sig)[-1], name = paste0('nn_s_dense',i) )
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                  input_shape =dim(X.train.nn.sig)[-1], name = paste0('nn_s_cnn',i) )
+                                                  input_shape =dim(X.nn.sig)[-1], name = paste0('nn_s_cnn',i) )
       }
       
     }
@@ -530,107 +530,107 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
   }
   #Additive towers
   #Location
-  n.dim.add_loc=length(dim(X.train.add.basis.mu))
-  if(!is.null(X.train.add.basis.mu) & !is.null(X.train.add.basis.mu) ) {
+  n.dim.add_loc=length(dim(X.add.basis.mu))
+  if(!is.null(X.add.basis.mu) & !is.null(X.add.basis.mu) ) {
     
     addBranchloc <- input_add_loc %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis.mu)[2:(n.dim.add_loc-2)],prod(dim(X.train.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis.mu)[2:(n.dim.add_loc-2)],prod(dim(X.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_loc',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]),ncol=1)),use_bias = F)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]),ncol=1)),use_bias = F)
   }
-  if(!is.null(X.train.add.basis.mu) & is.null(X.train.add.basis.mu) ) {
+  if(!is.null(X.add.basis.mu) & is.null(X.add.basis.mu) ) {
     
     addBranchloc <- input_add_loc %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis.mu)[2:(n.dim.add_loc-2)],prod(dim(X.train.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis.mu)[2:(n.dim.add_loc-2)],prod(dim(X.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_loc',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]),ncol=1),array(init.loc)),use_bias = T)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis.mu)[(n.dim.add_loc-1):n.dim.add_loc]),ncol=1),array(init.loc)),use_bias = T)
   }
   #Shape
-  n.dim.add_s=length(dim(X.train.add.basis.sig))
-  if(!is.null(X.train.add.basis.sig) & !is.null(X.train.add.basis.sig) ) {
+  n.dim.add_s=length(dim(X.add.basis.sig))
+  if(!is.null(X.add.basis.sig) & !is.null(X.add.basis.sig) ) {
     
     addBranchs <- input_add_s %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis.sig)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis.sig)[2:(n.dim.add_s-2)],prod(dim(X.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_s',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]),ncol=1)),use_bias = F)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]),ncol=1)),use_bias = F)
   }
-  if(!is.null(X.train.add.basis.sig) & is.null(X.train.add.basis.sig) ) {
+  if(!is.null(X.add.basis.sig) & is.null(X.add.basis.sig) ) {
     
     addBranchs <- input_add_s %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis.sig)[2:(n.dim.add_s-2)],prod(dim(X.train.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis.sig)[2:(n.dim.add_s-2)],prod(dim(X.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_s',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]),ncol=1),array(init.sig)),use_bias = T)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis.sig)[(n.dim.add_s-1):n.dim.add_s]),ncol=1),array(init.sig)),use_bias = T)
   }
   #Linear towers
   
   #Location
-  if(!is.null(X.train.lin.mu) ) {
-    n.dim.lin_loc=length(dim(X.train.lin.mu))
+  if(!is.null(X.lin.mu) ) {
+    n.dim.lin_loc=length(dim(X.lin.mu))
     
-    if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu )){
+    if(is.null(X.nn.mu) & is.null(X.add.basis.mu )){
       linBranchloc <- input_lin_loc%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.mu)[-1], name = 'lin_loc',
-                    weights=list(matrix(0,nrow=dim(X.train.lin.mu)[n.dim.lin_loc],ncol=1),array(init.loc)),use_bias=T)
+                    input_shape =dim(X.lin.mu)[-1], name = 'lin_loc',
+                    weights=list(matrix(0,nrow=dim(X.lin.mu)[n.dim.lin_loc],ncol=1),array(init.loc)),use_bias=T)
     }else{
       linBranchloc <- input_lin_loc%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.mu)[-1], name = 'lin_loc',
-                    weights=list(matrix(0,nrow=dim(X.train.lin.mu)[n.dim.lin_loc],ncol=1)),use_bias=F)
+                    input_shape =dim(X.lin.mu)[-1], name = 'lin_loc',
+                    weights=list(matrix(0,nrow=dim(X.lin.mu)[n.dim.lin_loc],ncol=1)),use_bias=F)
     }
   }
   #Shape
-  if(!is.null(X.train.lin.sig) ) {
-    n.dim.lin_s=length(dim(X.train.lin.sig))
+  if(!is.null(X.lin.sig) ) {
+    n.dim.lin_s=length(dim(X.lin.sig))
     
-    if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig )){
+    if(is.null(X.nn.sig) & is.null(X.add.basis.sig )){
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.sig)[-1], name = 'lin_s',
-                    weights=list(matrix(0,nrow=dim(X.train.lin.sig)[n.dim.lin_s],ncol=1),array(init.sig)),use_bias=T)
+                    input_shape =dim(X.lin.sig)[-1], name = 'lin_s',
+                    weights=list(matrix(0,nrow=dim(X.lin.sig)[n.dim.lin_s],ncol=1),array(init.sig)),use_bias=T)
     }else{
       linBranchs <- input_lin_s%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin.sig)[-1], name = 'lin_s',
-                    weights=list(matrix(0,nrow=dim(X.train.lin.sig)[n.dim.lin_s],ncol=1)),use_bias=F)
+                    input_shape =dim(X.lin.sig)[-1], name = 'lin_s',
+                    weights=list(matrix(0,nrow=dim(X.lin.sig)[n.dim.lin_s],ncol=1)),use_bias=F)
     }
   }
   
   #Stationary towers
   
   #Location
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu)) {
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu)) {
     
-    if(!is.null(X.train.nn.sig)){
-      statBranchloc <- input_nn_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.sig)[-1], trainable=F,
-                                                weights=list(matrix(0,nrow=dim(X.train.nn.sig)[length(dim(X.train.nn.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+    if(!is.null(X.nn.sig)){
+      statBranchloc <- input_nn_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.nn.sig)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(X.nn.sig)[length(dim(X.nn.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
-    }else  if(!is.null(X.train.lin.sig)){
-      statBranchloc <- input_lin_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.lin.sig)[-1], trainable=F,
-                                                 weights=list(matrix(0,nrow=dim(X.train.lin.sig)[length(dim(X.train.lin.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+    }else  if(!is.null(X.lin.sig)){
+      statBranchloc <- input_lin_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.lin.sig)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.lin.sig)[length(dim(X.lin.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
-    }else  if(!is.null(X.train.add.basis.sig)){
-      statBranchloc <- input_add_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.add.basis.sig)[-1], trainable=F,
-                                                 weights=list(matrix(0,nrow=dim(X.train.add.basis.sig)[length(dim(X.train.add.basis.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
+    }else  if(!is.null(X.add.basis.sig)){
+      statBranchloc <- input_add_s %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.add.basis.sig)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.add.basis.sig)[length(dim(X.add.basis.sig))],ncol=1),array(1,dim=c(1))), name = 'q_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.loc),nrow=1,ncol=1)), name = 'q_stationary_dense2')
     }
     
   }
   
   #Shape
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig)) {
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig)) {
     
-    if(!is.null(X.train.nn.mu)){
-      statBranchs <- input_nn_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.mu)[-1], trainable=F,
-                                                weights=list(matrix(0,nrow=dim(X.train.nn.mu)[length(dim(X.train.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+    if(!is.null(X.nn.mu)){
+      statBranchs <- input_nn_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.nn.mu)[-1], trainable=F,
+                                                weights=list(matrix(0,nrow=dim(X.nn.mu)[length(dim(X.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.sig),nrow=1,ncol=1)), name = 's_stationary_dense2')
-    }else  if(!is.null(X.train.lin.mu)){
-      statBranchs <- input_lin_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.mu)[-1], trainable=F,
-                                                 weights=list(matrix(0,nrow=dim(X.train.nn.mu)[length(dim(X.train.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+    }else  if(!is.null(X.lin.mu)){
+      statBranchs <- input_lin_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.nn.mu)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.nn.mu)[length(dim(X.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.sig),nrow=1,ncol=1)), name = 's_stationary_dense2')
-    }else  if(!is.null(X.train.add.basis.mu)){
-      statBranchs <- input_add_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.train.nn.mu)[-1], trainable=F,
-                                                 weights=list(matrix(0,nrow=dim(X.train.nn.mu)[length(dim(X.train.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
+    }else  if(!is.null(X.add.basis.mu)){
+      statBranchs <- input_add_loc %>% layer_dense(units = 1 ,activation = 'relu', input_shape =dim(X.nn.mu)[-1], trainable=F,
+                                                 weights=list(matrix(0,nrow=dim(X.nn.mu)[length(dim(X.nn.mu))],ncol=1),array(1,dim=c(1))), name = 's_stationary_dense1') %>%
         layer_dense(units = 1 ,activation = 'linear',use_bias = F,weights=list(matrix(array(init.sig),nrow=1,ncol=1)), name = 's_stationary_dense2')
     }
     
@@ -640,36 +640,36 @@ lognormal.NN.build=function(X.train.nn.mu,X.train.lin.mu,X.train.add.basis.mu,
   #Combine towers
   
   #Location
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  linBranchloc,nnBranchloc),name="Combine_loc_components")  #Add all towers
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  linBranchloc),name="Combine_loc_components")  #Add GAM+lin towers
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )  locBranchjoined <- layer_add(inputs=c(  linBranchloc,nnBranchloc),name="Combine_loc_components")  #Add nn+lin towers
-  if(!is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  nnBranchloc),name="Combine_loc_components")  #Add nn+GAM towers
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & !is.null(X.train.lin.mu) )  locBranchjoined <- linBranchloc  #Just lin tower
-  if(is.null(X.train.nn.mu) & !is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )  locBranchjoined <- addBranchloc  #Just GAM tower
-  if(!is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )  locBranchjoined <- nnBranchloc  #Just nn tower
-  if(is.null(X.train.nn.mu) & is.null(X.train.add.basis.mu) & is.null(X.train.lin.mu) )  locBranchjoined <- statBranchloc  #Just stationary tower
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  linBranchloc,nnBranchloc),name="Combine_loc_components")  #Add all towers
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & !is.null(X.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  linBranchloc),name="Combine_loc_components")  #Add GAM+lin towers
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) )  locBranchjoined <- layer_add(inputs=c(  linBranchloc,nnBranchloc),name="Combine_loc_components")  #Add nn+lin towers
+  if(!is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) )  locBranchjoined <- layer_add(inputs=c(addBranchloc,  nnBranchloc),name="Combine_loc_components")  #Add nn+GAM towers
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & !is.null(X.lin.mu) )  locBranchjoined <- linBranchloc  #Just lin tower
+  if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) )  locBranchjoined <- addBranchloc  #Just GAM tower
+  if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )  locBranchjoined <- nnBranchloc  #Just nn tower
+  if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )  locBranchjoined <- statBranchloc  #Just stationary tower
   
   #Shape
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs),name="Combine_s_components")  #Add all towers
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs),name="Combine_s_components")  #Add GAM+lin towers
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs),name="Combine_s_components")  #Add nn+lin towers
-  if(!is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs),name="Combine_s_components")  #Add nn+GAM towers
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & !is.null(X.train.lin.sig) )  sBranchjoined <- linBranchs  #Just lin tower
-  if(is.null(X.train.nn.sig) & !is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )  sBranchjoined <- addBranchs  #Just GAM tower
-  if(!is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )  sBranchjoined <- nnBranchs  #Just nn tower
-  if(is.null(X.train.nn.sig) & is.null(X.train.add.basis.sig) & is.null(X.train.lin.sig) )  sBranchjoined <- statBranchs  #Just stationary tower
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs),name="Combine_s_components")  #Add all towers
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & !is.null(X.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs),name="Combine_s_components")  #Add GAM+lin towers
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs),name="Combine_s_components")  #Add nn+lin towers
+  if(!is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs),name="Combine_s_components")  #Add nn+GAM towers
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & !is.null(X.lin.sig) )  sBranchjoined <- linBranchs  #Just lin tower
+  if(is.null(X.nn.sig) & !is.null(X.add.basis.sig) & is.null(X.lin.sig) )  sBranchjoined <- addBranchs  #Just GAM tower
+  if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )  sBranchjoined <- nnBranchs  #Just nn tower
+  if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )  sBranchjoined <- statBranchs  #Just stationary tower
   
   #Apply link functions
   if(link.loc=="exp") locBranchjoined <- locBranchjoined %>% layer_activation( activation = 'exponential', name = "loc_activation") else if(link.loc=="identity") locBranchjoined <- locBranchjoined %>% layer_activation( activation = 'linear', name = "loc_activation")
   sBranchjoined <- sBranchjoined %>% layer_activation( activation = 'exponential', name = "s_activation")
   
   input=c()
-  if(!is.null(X.train.lin.mu) ) input=c(input,input_lin_loc)
-  if(!is.null(X.train.add.basis.mu) ) input=c(input,input_add_loc)
-  if(!is.null(X.train.nn.mu) ) input=c(input,input_nn_loc)
-  if(!is.null(X.train.lin.sig) ) input=c(input,input_lin_s)
-  if(!is.null(X.train.add.basis.sig) ) input=c(input,input_add_s)
-  if(!is.null(X.train.nn.sig) ) input=c(input,input_nn_s)
+  if(!is.null(X.lin.mu) ) input=c(input,input_lin_loc)
+  if(!is.null(X.add.basis.mu) ) input=c(input,input_add_loc)
+  if(!is.null(X.nn.mu) ) input=c(input,input_nn_loc)
+  if(!is.null(X.lin.sig) ) input=c(input,input_lin_s)
+  if(!is.null(X.add.basis.sig) ) input=c(input,input_add_s)
+  if(!is.null(X.nn.sig) ) input=c(input,input_nn_s)
   input=c(input)
   
   

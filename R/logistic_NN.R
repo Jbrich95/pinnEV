@@ -13,16 +13,16 @@
 #' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
-#' @param X.train  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
-#' \item{\code{X.train.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+#' @param X  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
+#' \item{\code{X.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
-#' \item{\code{X.train.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+#' \item{\code{X.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 #' If \code{NULL}, a model without the additive component is built and trained.}
-#' \item{\code{X.train.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
+#' \item{\code{X.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 #' }
-#' Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.valid}.
+#' Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
 #' @param init.p sets the initial probability estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.
@@ -33,13 +33,13 @@
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{logistic.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
 
 
 #' @details{
 #' Consider a Bernoulli random variable, say \eqn{Z\sim\mbox{Bernoulli}(p)}, with probability mass function \eqn{\Pr(Z=1)=p=1-\Pr(Z=0)=1-p}. Let \eqn{Y\in\{0,1\}} be a univariate Boolean response and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-#'  We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
+#'  We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p\{\mathbf{x})\}} with
 #' \deqn{p(\mathbf{x})=h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is the logistic link-function and
 #' \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively,
 #' and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is estimated using a neural network.
@@ -74,22 +74,22 @@
 #'
 #'#Split predictors into linear, additive and nn. 
 #'
-#'X.train.nn=preds[,,,1:5] #Five nn predictors
-#'X.train.lin=preds[,,,6:8] #Three linear predictors
-#'X.train.add=preds[,,,9:10] #Two additive predictors
+#'X.nn=preds[,,,1:5] #Five nn predictors
+#'X.lin=preds[,,,6:8] #Three linear predictors
+#'X.add=preds[,,,9:10] #Two additive predictors
 #'
 #' # Create toy response data
 #'
 #' #Linear contribution
-#' m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
+#' m_L = 0.3*X.lin[,,,1]+0.6*X.lin[,,,2]-0.2*X.lin[,,,3]
 #'
 #' # Additive contribution
-#'   m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
-#' 0.1*X.train.add[,,,2]^3-0.5*X.train.add[,,,2]
+#'   m_A = 0.1*X.add[,,,1]^2+0.2*X.add[,,,1]-0.1*X.add[,,,2]^2+
+#' 0.1*X.add[,,,2]^3-0.5*X.add[,,,2]
 #'
 #' #Non-additive contribution - to be estimated by NN
-#' m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
-#' sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,4]+X.train.nn[,,,5])
+#' m_N = exp(-3+X.nn[,,,2]+X.nn[,,,3])+
+#' sin(X.nn[,,,1]-X.nn[,,,2])*(X.nn[,,,4]+X.nn[,,,5])
 #'
 #' p=0.5+0.5*tanh((m_L+m_A+m_N)/2) #Logistic link
 #' Y=apply(p,1:3,function(x) rbinom(1,1,x))
@@ -107,7 +107,7 @@
 #'
 #'
 #' #To build a model with an additive component, we require an array of evaluations of
-#' #the basis functions for each pre-specified knot and entry to X.train.add
+#' #the basis functions for each pre-specified knot and entry to X.add
 #'
 #' rad=function(x,c){ #Define a basis function. Here we use the radial bases
 #'   out=abs(x-c)^2*log(abs(x-c))
@@ -116,17 +116,17 @@
 #' }
 #'
 #' n.knot = 5 # set number of knots. Must be the same for each additive predictor
-#' knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
+#' knots=matrix(nrow=dim(X.add)[4],ncol=n.knot)
 #'
 #' #We set knots to be equally-spaced marginal quantiles
-#' for( i in 1:dim(X.train.add)[4]) {
-#' knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))}
+#' for( i in 1:dim(X.add)[4]) {
+#' knots[i,]=quantile(X.add[,,,i],probs=seq(0,1,length=n.knot))}
 #'
-#' X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
-#' for( i in 1:dim(X.train.add)[4]) {
+#' X.add.basis<-array(dim=c(dim(X.add),n.knot))
+#' for( i in 1:dim(X.add)[4]) {
 #' for(k in 1:n.knot) {
-#' X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
-#' #Evaluate rad at all entries to X.train.add and for all knots
+#' X.add.basis[,,,i,k]= rad(x=X.add[,,,i],c=knots[i,k])
+#' #Evaluate rad at all entries to X.add and for all knots
 #' }}
 #' 
 #'  #Penalty matrix for additive functions
@@ -134,8 +134,8 @@
 #'# Set smoothness parameters for first and second additive functions
 #'  lambda = c(0.1,0.1) 
 #'  
-#'S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
-#'for(i in 1:dim(X.train.add)[4]){
+#'S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
+#'for(i in 1:dim(X.add)[4]){
 #'  for(j in 1:n.knot){
 #'   for(k in 1:n.knot){
 #'      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
@@ -143,20 +143,20 @@
 #' }
 #'}
 #'
-#' X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
-#' "X.train.add.basis"=X.train.add.basis)
+#' X=list("X.nn"=X.nn, "X.lin"=X.lin,
+#' "X.add.basis"=X.add.basis)
 #'
 #' #Build and train a two-layered "lin+GAM+NN" logistic MLP. 
 #' #Note that training is not run to completion.
-#' NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=600,
+#' NN.fit<-logistic.NN.train(Y.train, Y.valid,X,  type="MLP",n.ep=600,
 #'                       batch.size=100,init.p=0.4, widths=c(6,3),
 #'                       S_lambda=S_lambda)
 #'
-#' out<-logistic.NN.predict(X.train,NN.fit$model)
+#' out<-logistic.NN.predict(X,NN.fit$model)
 #' hist(out$pred.p) #Plot histogram of predicted probability
 #' print(out$lin.coeff)
 #'
-#'n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
+#'n.add.preds=dim(X.add)[length(dim(X.add))]
 #'par(mfrow=c(1,n.add.preds))
 #'for(i in 1:n.add.preds){
 #'  plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis
@@ -180,7 +180,7 @@
 #' @rdname logistic.NN
 #' @export
 
-logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
+logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",
                           n.ep=100, batch.size=100,init.p=NULL, widths=c(6,3), filter.dim=c(3,3),
                        seed=NULL, init.wb_path=NULL,S_lambda=NULL)
 {
@@ -188,27 +188,27 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
 
 
 
-  if(is.null(X.train)  ) stop("No predictors provided")
+  if(is.null(X)  ) stop("No predictors provided")
   if(is.null(Y.train)) stop("No training response data provided")
 
-  X.train.nn=X.train$X.train.nn
-  X.train.lin=X.train$X.train.lin
-  X.train.add.basis=X.train$X.train.add.basis
+  X.nn=X$X.nn
+  X.lin=X$X.lin
+  X.add.basis=X$X.add.basis
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) {  train.data= list(X.train.lin,X.train.add.basis,X.train.nn); print("Defining lin+GAM+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.train.lin,add_input_p=X.train.add.basis,  nn_input_p=X.train.nn),Y.valid)}
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) {   train.data= list(X.train.lin,X.train.add.basis); print("Defining lin+GAM model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.train.lin,add_input_p=X.train.add.basis),Y.valid)}
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) { train.data= list(X.train.lin,X.train.nn); print("Defining lin+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.train.lin, nn_input_p=X.train.nn),Y.valid)}
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) {train.data= list(X.train.add.basis,X.train.nn); print("Defining GAM+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_p=X.train.add.basis,  nn_input_p=X.train.nn),Y.valid)}
-  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )   {train.data= list(X.train.lin); print("Defining fully-linear model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.train.lin),Y.valid)}
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.add.basis); print("Defining fully-additive model for p" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_p=X.train.add.basis),Y.valid)}
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   {train.data= list(X.train.nn); print("Defining fully-NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_p=X.train.nn),Y.valid)}
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn); print("Defining lin+GAM+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.lin,add_input_p=X.add.basis,  nn_input_p=X.nn),Y.valid)}
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis); print("Defining lin+GAM model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.lin,add_input_p=X.add.basis),Y.valid)}
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn); print("Defining lin+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.lin, nn_input_p=X.nn),Y.valid)}
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn); print("Defining GAM+NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_p=X.add.basis,  nn_input_p=X.nn),Y.valid)}
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin); print("Defining fully-linear model for p" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_p=X.lin),Y.valid)}
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis); print("Defining fully-additive model for p" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_p=X.add.basis),Y.valid)}
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn); print("Defining fully-NN model for p" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_p=X.nn),Y.valid)}
 
-  if(is.null(S_lambda) & !is.null(X.train.add.basis)){print("No smoothing penalty used")}
+  if(is.null(S_lambda) & !is.null(X.add.basis)){print("No smoothing penalty used")}
 
-  if(is.null(X.train.add.basis)){S_lambda=NULL}
+  if(is.null(X.add.basis)){S_lambda=NULL}
 
-  if(type=="CNN" & !is.null(X.train.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
-  if(type=="MLP"  & !is.null(X.train.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
+  if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="MLP"  & !is.null(X.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
   print(paste0("Training for ", n.ep," epochs with a batch size of ", batch.size))
   reticulate::use_virtualenv("myenv", required = T)
@@ -217,7 +217,7 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
   if(is.null(init.p)) init.p=mean(Y.train[Y.train>=0]==1)
 
 
-  model<-logistic.NN.build(X.train.nn,X.train.lin,X.train.add.basis, type, init.p, widths,filter.dim)
+  model<-logistic.NN.build(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.dim)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   model %>% compile(
     optimizer="adam",
@@ -262,52 +262,52 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X.train, type="MLP",
 #' @rdname logistic.NN
 #' @export
 #'
-logistic.NN.predict=function(X.train, model)
+logistic.NN.predict=function(X, model)
 {
 
 
 
-  if(is.null(X.train)  ) stop("No predictors provided")
+  if(is.null(X)  ) stop("No predictors provided")
 
-  X.train.nn=X.train$X.train.nn
-  X.train.lin=X.train$X.train.lin
-  X.train.add.basis=X.train$X.train.add.basis
+  X.nn=X$X.nn
+  X.lin=X$X.lin
+  X.add.basis=X$X.add.basis
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) pred.p<-model %>% predict(  list(X.train.lin,X.train.add.basis,X.train.nn))
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )    pred.p<-model %>% predict( list(X.train.lin,X.train.add.basis))
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) pred.p<-model %>% predict( list(X.train.lin,X.train.nn))
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) ) pred.p<-model %>% predict( list(X.train.add.basis,X.train.nn))
-  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pred.p<-model %>% predict(list(X.train.lin))
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )   pred.p<-model %>% predict( list(X.train.add.basis))
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )   pred.p<-model %>% predict( list(X.train.nn))
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) pred.p<-model %>% predict(  list(X.lin,X.add.basis,X.nn))
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )    pred.p<-model %>% predict( list(X.lin,X.add.basis))
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) pred.p<-model %>% predict( list(X.lin,X.nn))
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) pred.p<-model %>% predict( list(X.add.basis,X.nn))
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pred.p<-model %>% predict(list(X.lin))
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   pred.p<-model %>% predict( list(X.add.basis))
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   pred.p<-model %>% predict( list(X.nn))
 
-  if(!is.null(X.train.add.basis))  gam.weights<-matrix(t(model$get_layer("add_p")$get_weights()[[1]]),nrow=dim(X.train.add.basis)[length(dim(X.train.add.basis))-1],ncol=dim(X.train.add.basis)[length(dim(X.train.add.basis))],byrow=T)
+  if(!is.null(X.add.basis))  gam.weights<-matrix(t(model$get_layer("add_p")$get_weights()[[1]]),nrow=dim(X.add.basis)[length(dim(X.add.basis))-1],ncol=dim(X.add.basis)[length(dim(X.add.basis))],byrow=T)
 
-  if(!is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("pred.p"=pred.p, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]]),"gam.weights"=gam.weights))
-  if(is.null(X.train.add.basis) & !is.null(X.train.lin)) return(list("pred.p"=pred.p, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]])))
-  if(!is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("pred.p"=pred.p,"gam.weights"=gam.weights))
-  if(is.null(X.train.add.basis) & is.null(X.train.lin)) return(list("pred.p"=pred.p))
+  if(!is.null(X.add.basis) & !is.null(X.lin)) return(list("pred.p"=pred.p, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]]),"gam.weights"=gam.weights))
+  if(is.null(X.add.basis) & !is.null(X.lin)) return(list("pred.p"=pred.p, "lin.coeff"=c(model$get_layer("lin_p")$get_weights()[[1]])))
+  if(!is.null(X.add.basis) & is.null(X.lin)) return(list("pred.p"=pred.p,"gam.weights"=gam.weights))
+  if(is.null(X.add.basis) & is.null(X.lin)) return(list("pred.p"=pred.p))
 
 
 }
 #'
 #'
-logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.p, widths,filter.dim)
+logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.dim)
 {
   #Additive input
-  if(!is.null(X.train.add.basis))  input_add<- layer_input(shape = dim(X.train.add.basis)[-1], name = 'add_input_p')
+  if(!is.null(X.add.basis))  input_add<- layer_input(shape = dim(X.add.basis)[-1], name = 'add_input_p')
 
   #NN input
 
-  if(!is.null(X.train.nn))   input_nn <- layer_input(shape = dim(X.train.nn)[-1], name = 'nn_input_p')
+  if(!is.null(X.nn))   input_nn <- layer_input(shape = dim(X.nn)[-1], name = 'nn_input_p')
 
   #Linear input
 
-  if(!is.null(X.train.lin)) input_lin <- layer_input(shape = dim(X.train.lin)[-1], name = 'lin_input_p')
+  if(!is.null(X.lin)) input_lin <- layer_input(shape = dim(X.lin)[-1], name = 'lin_input_p')
 
 
   #NN tower
-  if(!is.null(X.train.nn)){
+  if(!is.null(X.nn)){
 
     nunits=c(widths,1)
     n.layers=length(nunits)-1
@@ -316,12 +316,12 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
     if(type=="MLP"){
       for(i in 1:n.layers){
         nnBranchp <- nnBranchp  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                                input_shape =dim(X.train.nn)[-1], name = paste0('nn_p_dense',i) )
+                                                input_shape =dim(X.nn)[-1], name = paste0('nn_p_dense',i) )
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchp <- nnBranchp  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                  input_shape =dim(X.train.nn)[-1], name = paste0('nn_p_cnn',i) )
+                                                  input_shape =dim(X.nn)[-1], name = paste0('nn_p_cnn',i) )
       }
 
     }
@@ -332,50 +332,50 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
   }
 
   #Additive tower
-  n.dim.add=length(dim(X.train.add.basis))
-  if(!is.null(X.train.add.basis) & !is.null(X.train.add.basis) ) {
+  n.dim.add=length(dim(X.add.basis))
+  if(!is.null(X.add.basis) & !is.null(X.add.basis) ) {
 
     addBranchp <- input_add %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis)[2:(n.dim.add-2)],prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis)[2:(n.dim.add-2)],prod(dim(X.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_p',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1)),use_bias = F)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1)),use_bias = F)
   }
-  if(!is.null(X.train.add.basis) & is.null(X.train.add.basis) ) {
+  if(!is.null(X.add.basis) & is.null(X.add.basis) ) {
 
     addBranchp <- input_add %>%
-      layer_reshape(target_shape=c(dim(X.train.add.basis)[2:(n.dim.add-2)],prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
+      layer_reshape(target_shape=c(dim(X.add.basis)[2:(n.dim.add-2)],prod(dim(X.add.basis)[(n.dim.add-1):n.dim.add]))) %>%
       layer_dense(units = 1, activation = 'linear', name = 'add_p',
-                  weights=list(matrix(0,nrow=prod(dim(X.train.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1),array(log(init.p/(1-init.p)))),use_bias = T)
+                  weights=list(matrix(0,nrow=prod(dim(X.add.basis)[(n.dim.add-1):n.dim.add]),ncol=1),array(log(init.p/(1-init.p)))),use_bias = T)
   }
 
   #Linear tower
 
 
-  if(!is.null(X.train.lin) ) {
-    n.dim.lin=length(dim(X.train.lin))
+  if(!is.null(X.lin) ) {
+    n.dim.lin=length(dim(X.lin))
 
-    if(is.null(X.train.nn) & is.null(X.train.add.basis )){
+    if(is.null(X.nn) & is.null(X.add.basis )){
       linBranchp <- input_lin%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin)[-1], name = 'lin_p',
-                    weights=list(matrix(0,nrow=dim(X.train.lin)[n.dim.lin],ncol=1),array(log(init.p/(1-init.p)))),use_bias=T)
+                    input_shape =dim(X.lin)[-1], name = 'lin_p',
+                    weights=list(matrix(0,nrow=dim(X.lin)[n.dim.lin],ncol=1),array(log(init.p/(1-init.p)))),use_bias=T)
     }else{
       linBranchp <- input_lin%>%
         layer_dense(units = 1, activation = 'linear',
-                    input_shape =dim(X.train.lin)[-1], name = 'lin_p',
-                    weights=list(matrix(0,nrow=dim(X.train.lin)[n.dim.lin],ncol=1)),use_bias=F)
+                    input_shape =dim(X.lin)[-1], name = 'lin_p',
+                    weights=list(matrix(0,nrow=dim(X.lin)[n.dim.lin],ncol=1)),use_bias=F)
     }
   }
 
 
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp),name="Combine_p_components")  #Add all towers
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp),name="Combine_p_components")  #Add GAM+lin towers
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp),name="Combine_p_components")  #Add NN+lin towers
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp),name="Combine_p_components")  #Add NN+GAM towers
-  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  pBranchjoined <- linBranchp  #Just lin tower
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- addBranchp  #Just GAM tower
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  pBranchjoined <- nnBranchp  #Just NN tower
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp),name="Combine_p_components")  #Add all towers
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp),name="Combine_p_components")  #Add GAM+lin towers
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp),name="Combine_p_components")  #Add NN+lin towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp),name="Combine_p_components")  #Add NN+GAM towers
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- linBranchp  #Just lin tower
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- addBranchp  #Just GAM tower
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- nnBranchp  #Just NN tower
 
 
   #Apply link functions
@@ -383,13 +383,13 @@ logistic.NN.build=function(X.train.nn,X.train.lin,X.train.add.basis, type, init.
     layer_activation( activation = 'sigmoid', name = "p_activation")
 
 
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & !is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(pBranchjoined),name="Bernoulli" )
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(!is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(is.null(X.train.nn) & is.null(X.train.add.basis) & !is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_lin),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(is.null(X.train.nn) & !is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_add),   outputs = c(pBranchjoined) ,name="Bernoulli")
-  if(!is.null(X.train.nn) & is.null(X.train.add.basis) & is.null(X.train.lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(pBranchjoined),name="Bernoulli" )
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  model <- keras_model(  inputs = c(input_lin),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_add),   outputs = c(pBranchjoined) ,name="Bernoulli")
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(pBranchjoined),name="Bernoulli" )
 
   print(model)
 

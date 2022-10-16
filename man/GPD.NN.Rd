@@ -6,13 +6,13 @@
 \alias{GPD.NN.predict}
 \title{GPD PINN}
 \usage{
-GPD.NN.train(Y.train, Y.valid = NULL, X.train, u.train = NULL,
-  type = "MLP", link = "identity", tau = NULL, n.ep = 100,
-  batch.size = 100, init.scale = NULL, init.xi = NULL, widths = c(6,
-  3), filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
+GPD.NN.train(Y.train, Y.valid = NULL, X, u = NULL, type = "MLP",
+  link = "identity", tau = NULL, n.ep = 100, batch.size = 100,
+  init.scale = NULL, init.xi = NULL, widths = c(6, 3),
+  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
   S_lambda = NULL)
 
-GPD.NN.predict(X.train, u.train, model)
+GPD.NN.predict(X, u, model)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
@@ -22,18 +22,18 @@ The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X.train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma}. Must contain at least one of the following three named entries:\describe{
-\item{\code{X.train.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension then \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+\item{X}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma}. Must contain at least one of the following three named entries:\describe{
+\item{\code{X.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension then \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
-\item{\code{X.train.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+\item{\code{X.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 If \code{NULL}, a model without the additive component is built and trained.}
-\item{\code{X.train.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
+\item{\code{X.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.valid}.}
+Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
-\item{u.train}{an array with the same dimension as \code{Y.train}. Gives the threshold used to create exceedances of \code{Y.train}, see below. Note that \code{u.train} is applied to both \code{Y.train} and \code{Y.valid}.}
+\item{u}{an array with the same dimension as \code{Y.train}. Gives the threshold used to create exceedances of \code{Y.train}, see below. Note that \code{u} is applied to both \code{Y.train} and \code{Y.valid}.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
 the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
@@ -56,7 +56,7 @@ final layer has zero initial weights to ensure that the initial scale and shape 
 
 \item{model}{fitted \code{keras} model. Output from \code{GPD.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on \eqn{\log(\sigma)}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
@@ -100,25 +100,25 @@ dim(preds)=c(200,10,10,8)
 
 #Split predictors into linear, additive and nn. 
 
-X.train.nn=preds[,,,1:4] #Four nn predictors
-X.train.lin=preds[,,,5:6] #Two linear predictors
-X.train.add=preds[,,,7:8] #Two additive predictors
+X.nn=preds[,,,1:4] #Four nn predictors
+X.lin=preds[,,,5:6] #Two linear predictors
+X.add=preds[,,,7:8] #Two additive predictors
 
 
 # Create response data
 
 #Contribution to scale parameter
 #Linear contribution
-m_L = 0.5*X.train.lin[,,,1]-0.3*X.train.lin[,,,2]
+m_L = 0.5*X.lin[,,,1]-0.3*X.lin[,,,2]
 
 # Additive contribution
-m_A = 0.2*X.train.add[,,,1]^2+0.05*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
-0.1*X.train.add[,,,2]^3
+m_A = 0.2*X.add[,,,1]^2+0.05*X.add[,,,1]-0.1*X.add[,,,2]^2+
+0.1*X.add[,,,2]^3
 
 #Non-additive contribution - to be estimated by NN
-m_N =0.5*(exp(-4+X.train.nn[,,,2]+X.train.nn[,,,3])+
-            sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,1]+X.train.nn[,,,2])-
-            cos(X.train.nn[,,,3]-X.train.nn[,,,4])*(X.train.nn[,,,2]))
+m_N =0.5*(exp(-4+X.nn[,,,2]+X.nn[,,,3])+
+            sin(X.nn[,,,1]-X.nn[,,,2])*(X.nn[,,,1]+X.nn[,,,2])-
+            cos(X.nn[,,,3]-X.nn[,,,4])*(X.nn[,,,2]))
 
 sigma=2*exp(-2+m_L+m_A+m_N) #Exponential link
 xi=0.2 # Set xi
@@ -151,7 +151,7 @@ Y.valid[mask_inds]=-1e5
 
 
 #To build a model with an additive component, we require an array of evaluations of
-#the basis functions for each pre-specified knot and entry to X.train.add
+#the basis functions for each pre-specified knot and entry to X.add
 
 rad=function(x,c){ #Define a basis function. Here we use the radial bases
   out=abs(x-c)^2*log(abs(x-c))
@@ -161,18 +161,18 @@ rad=function(x,c){ #Define a basis function. Here we use the radial bases
 
 n.knot = 5 # set number of knots. Must be the same for each additive predictor
 
-knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
+knots=matrix(nrow=dim(X.add)[4],ncol=n.knot)
 
 #We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X.train.add)[4]){
- knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))
+for( i in 1:dim(X.add)[4]){
+ knots[i,]=quantile(X.add[,,,i],probs=seq(0,1,length=n.knot))
 }
 
-X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
-for( i in 1:dim(X.train.add)[4]) {
+X.add.basis<-array(dim=c(dim(X.add),n.knot))
+for( i in 1:dim(X.add)[4]) {
   for(k in 1:n.knot) {
-    X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
-    #Evaluate rad at all entries to X.train.add and for all knots
+    X.add.basis[,,,i,k]= rad(x=X.add[,,,i],c=knots[i,k])
+    #Evaluate rad at all entries to X.add and for all knots
   }}
 
 #Create smoothing penalty matrix for the two sigma additive functions
@@ -180,8 +180,8 @@ for( i in 1:dim(X.train.add)[4]) {
 # Set smoothness parameters for the two functions
 lambda = c(0.1,0.2) 
 
-S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
-for(i in 1:dim(X.train.add)[4]){
+S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
+for(i in 1:dim(X.add)[4]){
  for(j in 1:n.knot){
   for(k in 1:n.knot){
      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
@@ -190,18 +190,16 @@ for(i in 1:dim(X.train.add)[4]){
 }
 
 #lin+GAM+NN models defined for scale parameter
-X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
-             "X.train.add.basis"=X.train.add.basis) 
+X=list("X.nn"=X.nn, "X.lin"=X.lin,
+             "X.add.basis"=X.add.basis) 
 
 #We treat u as fixed and known. In an application, u can be estimated using quant.NN.train.
 
-u.train <- u
-
-#Fit the GPD model for exceedances above u.train. Note that training is not run to completion.
-fit<-GPD.NN.train(Y.train, Y.valid,X.train, u.train, type="MLP",
+#Fit the GPD model for exceedances above u. Note that training is not run to completion.
+fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP",
                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
                     widths=c(6,3),seed=1,S_lambda=S_lambda)
-out<-GPD.NN.predict(X.train=X.train,u.train=u.train,fit$model)
+out<-GPD.NN.predict(X=X,u=u,fit$model)
 hist(out$pred.sigma) #Plot histogram of predicted sigma
 print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 
@@ -213,7 +211,7 @@ print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 
 
 # Plot splines for the additive predictors
-n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
+n.add.preds=dim(X.add)[length(dim(X.add))]
 par(mfrow=c(1,n.add.preds))
 for(i in 1:n.add.preds){
   plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis

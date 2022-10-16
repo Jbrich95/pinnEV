@@ -6,12 +6,12 @@
 \alias{lognormal.NN.predict}
 \title{log-normal PINN}
 \usage{
-lognormal.NN.train(Y.train, Y.valid = NULL, X.train.mu, X.train.sig,
-  type = "MLP", link.loc = "identity", n.ep = 100, batch.size = 100,
-  init.loc = NULL, init.sig = NULL, widths = c(6, 3), filter.dim = c(3,
-  3), seed = NULL, init.wb_path = NULL, S_lambda = NULL)
+lognormal.NN.train(Y.train, Y.valid = NULL, X.mu, X.sig, type = "MLP",
+  link.loc = "identity", n.ep = 100, batch.size = 100, init.loc = NULL,
+  init.sig = NULL, widths = c(6, 3), filter.dim = c(3, 3), seed = NULL,
+  init.wb_path = NULL, S_lambda = NULL)
 
-lognormal.NN.predict(X.train.mu, X.train.sig, model)
+lognormal.NN.predict(X.mu, X.sig, model)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
@@ -21,18 +21,18 @@ The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X.train.mu}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{\mu}. Must contain at least one of the following three named entries:\describe{
-\item{\code{X.train.lin.mu}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+\item{X.mu}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{\mu}. Must contain at least one of the following three named entries:\describe{
+\item{\code{X.lin.mu}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
-\item{\code{X.train.add.basis.mu}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+\item{\code{X.add.basis.mu}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a_1\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 If \code{NULL}, a model without the additive component is built and trained.}
-\item{\code{X.train.nn.mu}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
+\item{\code{X.nn.mu}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X.train.mu} and \code{X.train.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.train.mu)}, then \eqn{\mu} will be treated as fixed over the predictors.}
+Note that \code{X.mu} and \code{X.sig} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.mu)}, then \eqn{\mu} will be treated as fixed over the predictors.}
 
-\item{X.train.sig}{similarly to \code{X.train.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.train.mu)} or \code{!is.null(X.train.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.}
+\item{X.sig}{similarly to \code{X.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.mu)} or \code{!is.null(X.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
 the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
@@ -53,7 +53,7 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial location and shape estimates are \code{init.loc} and \code{init.sig}, respectively,  across all dimensions.}
 
-\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.train.add.basis.mu} and \code{X.train.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.train.add.basis.mu)} and \code{!is.null(X.train.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.train.add.basis.mu)}; similarly for the second element and \code{!is.null(X.train.add.basis.sig)}.}
+\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.mu)}; similarly for the second element and \code{!is.null(X.add.basis.sig)}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 
@@ -102,44 +102,44 @@ dim(preds)=c(200,10,10,8)
 #We have 200 observations of eight predictors on a 10 by 10 grid.
 
 #Split predictors into linear, additive and nn. Different for the location and shape parameters.
-X.train.nn.mu=preds[,,,1:4] #Four nn predictors for mu
-X.train.lin.mu=preds[,,,5:6] #Two additive predictors for mu
-X.train.add.mu=preds[,,,7:8] #Two additive predictors for mu
+X.nn.mu=preds[,,,1:4] #Four nn predictors for mu
+X.lin.mu=preds[,,,5:6] #Two additive predictors for mu
+X.add.mu=preds[,,,7:8] #Two additive predictors for mu
 
-X.train.nn.sig=preds[,,,1:2] #Two nn predictors for sigma
-X.train.lin.sig=preds[,,,3] #One linear predictor for sigma
-dim(X.train.lin.sig)=c(dim(X.train.lin.sig),1) #Change dimension so consistent
-X.train.add.sig=preds[,,,4] #One additive predictor for sigma
-dim(X.train.add.sig)=c(dim(X.train.add.sig),1) #Change dimension so consistent
+X.nn.sig=preds[,,,1:2] #Two nn predictors for sigma
+X.lin.sig=preds[,,,3] #One linear predictor for sigma
+dim(X.lin.sig)=c(dim(X.lin.sig),1) #Change dimension so consistent
+X.add.sig=preds[,,,4] #One additive predictor for sigma
+dim(X.add.sig)=c(dim(X.add.sig),1) #Change dimension so consistent
 
 
 # Create toy response data
 
 #Contribution to location parameter
 #Linear contribution
-m_L_1 = 0.3*X.train.lin.mu[,,,1]+0.6*X.train.lin.mu[,,,2]
+m_L_1 = 0.3*X.lin.mu[,,,1]+0.6*X.lin.mu[,,,2]
 
 # Additive contribution
-m_A_1 = 0.05*X.train.add.mu[,,,1]^3+0.2*X.train.add.mu[,,,1]-
- 0.05*X.train.add.mu[,,,2]^3+0.5*X.train.add.mu[,,,2]^2
+m_A_1 = 0.05*X.add.mu[,,,1]^3+0.2*X.add.mu[,,,1]-
+ 0.05*X.add.mu[,,,2]^3+0.5*X.add.mu[,,,2]^2
 
 #Non-additive contribution - to be estimated by NN
-m_N_1 = 0.25*exp(-3+X.train.nn.mu[,,,4]+X.train.nn.mu[,,,1])+
-  sin(X.train.nn.mu[,,,1]-X.train.nn.mu[,,,2])*(X.train.nn.mu[,,,4]+X.train.nn.mu[,,,2])-
-  cos(X.train.nn.mu[,,,4]-X.train.nn.mu[,,,1])*(X.train.nn.mu[,,,3]+X.train.nn.mu[,,,1])
+m_N_1 = 0.25*exp(-3+X.nn.mu[,,,4]+X.nn.mu[,,,1])+
+  sin(X.nn.mu[,,,1]-X.nn.mu[,,,2])*(X.nn.mu[,,,4]+X.nn.mu[,,,2])-
+  cos(X.nn.mu[,,,4]-X.nn.mu[,,,1])*(X.nn.mu[,,,3]+X.nn.mu[,,,1])
 
 mu=m_L_1+m_A_1+m_N_1 #Identity link
 
 #Contribution to shape parameter
 #Linear contribution
-m_L_2 = 0.5*X.train.lin.sig[,,,1]
+m_L_2 = 0.5*X.lin.sig[,,,1]
 
 # Additive contribution
-m_A_2 = 0.1*X.train.add.sig[,,,1]^2+0.2*X.train.add.sig[,,,1]
+m_A_2 = 0.1*X.add.sig[,,,1]^2+0.2*X.add.sig[,,,1]
 
 #Non-additive contribution - to be estimated by NN
-m_N_2 = 0.1*exp(-4+X.train.nn.sig[,,,2]+X.train.nn.sig[,,,1])+
-  0.1* sin(X.train.nn.sig[,,,1]-X.train.nn.sig[,,,2])*(X.train.nn.sig[,,,1]+X.train.nn.sig[,,,2])
+m_N_2 = 0.1*exp(-4+X.nn.sig[,,,2]+X.nn.sig[,,,1])+
+  0.1* sin(X.nn.sig[,,,1]-X.nn.sig[,,,2])*(X.nn.sig[,,,1]+X.nn.sig[,,,2])
 
 sig=0.1*exp(m_L_2+m_A_2+m_N_2) #Exponential link
 
@@ -163,7 +163,7 @@ Y.valid[mask_inds]=-1e5
 
 
 #To build a model with an additive component, we require an array of evaluations of
-#the basis functions for each pre-specified knot and entry to X.train.add.mu and X.train.add.sig
+#the basis functions for each pre-specified knot and entry to X.add.mu and X.add.sig
 
 rad=function(x,c){ #Define a basis function. Here we use the radial bases
   out=abs(x-c)^2*log(abs(x-c))
@@ -176,18 +176,18 @@ n.knot.mu = 5; n.knot.sig = 4 # set number of knots.
 #but can differ between the parameters mu and sigma
 
 #Get knots for mu predictors
-knots.mu=matrix(nrow=dim(X.train.add.mu)[4],ncol=n.knot.mu)
+knots.mu=matrix(nrow=dim(X.add.mu)[4],ncol=n.knot.mu)
 
 #We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X.train.add.mu)[4]){
-knots.mu[i,]=quantile(X.train.add.mu[,,,i],probs=seq(0,1,length=n.knot.mu))
+for( i in 1:dim(X.add.mu)[4]){
+knots.mu[i,]=quantile(X.add.mu[,,,i],probs=seq(0,1,length=n.knot.mu))
 }
 #Evaluate radial basis functions for mu predictors
-X.train.add.basis.mu<-array(dim=c(dim(X.train.add.mu),n.knot.mu))
-for( i in 1:dim(X.train.add.mu)[4]) {
+X.add.basis.mu<-array(dim=c(dim(X.add.mu),n.knot.mu))
+for( i in 1:dim(X.add.mu)[4]) {
   for(k in 1:n.knot.mu) {
-    X.train.add.basis.mu[,,,i,k]= rad(x=X.train.add.mu[,,,i],c=knots.mu[i,k])
-    #Evaluate rad at all entries to X.train.add.mu and for all knots
+    X.add.basis.mu[,,,i,k]= rad(x=X.add.mu[,,,i],c=knots.mu[i,k])
+    #Evaluate rad at all entries to X.add.mu and for all knots
   }}
   
   #'#Create smoothing penalty matrix for the two q_alpha additive functions
@@ -195,10 +195,10 @@ for( i in 1:dim(X.train.add.mu)[4]) {
 # Set smoothness parameters for two functions
  lambda = c(0.1,0.2) 
 
-S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.train.add.mu)[4],
-ncol=n.knot.mu*dim(X.train.add.mu)[4])
+S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.add.mu)[4],
+ncol=n.knot.mu*dim(X.add.mu)[4])
 
-for(i in 1:dim(X.train.add.mu)[4]){
+for(i in 1:dim(X.add.mu)[4]){
  for(j in 1:n.knot.mu){
   for(k in 1:n.knot.mu){
      S_lambda.mu[(j+(i-1)*n.knot.mu),(k+(i-1)*n.knot.mu)]=lambda[i]*rad(knots.mu[i,j],knots.mu[i,k])
@@ -208,20 +208,20 @@ for(i in 1:dim(X.train.add.mu)[4]){
 
 #Get knots for sigma predictor
 
-knots.sig=matrix(nrow=dim(X.train.add.sig)[4],ncol=n.knot.sig)
+knots.sig=matrix(nrow=dim(X.add.sig)[4],ncol=n.knot.sig)
 
-for( i in 1:dim(X.train.add.sig)[4]){
- knots.sig[i,]=quantile(X.train.add.sig[,,,i],probs=seq(0,1,length=n.knot.sig))
+for( i in 1:dim(X.add.sig)[4]){
+ knots.sig[i,]=quantile(X.add.sig[,,,i],probs=seq(0,1,length=n.knot.sig))
 }
 
 #Evaluate radial basis functions for sigma predictor
 
-X.train.add.basis.sig<-array(dim=c(dim(X.train.add.sig),n.knot.sig))
+X.add.basis.sig<-array(dim=c(dim(X.add.sig),n.knot.sig))
 
-for( i in 1:dim(X.train.add.sig)[4]) {
+for( i in 1:dim(X.add.sig)[4]) {
   for(k in 1:n.knot.sig) {
-    X.train.add.basis.sig[,,,i,k]= rad(x=X.train.add.sig[,,,i],c=knots.sig[i,k])
-    #Evaluate rad at all entries to X.train.add.mu and for all knots
+    X.add.basis.sig[,,,i,k]= rad(x=X.add.sig[,,,i],c=knots.sig[i,k])
+    #Evaluate rad at all entries to X.add.mu and for all knots
   }}
 
 #Create smoothing penalty matrix for the s_beta additive function
@@ -229,10 +229,10 @@ for( i in 1:dim(X.train.add.sig)[4]) {
 # Set smoothness parameter
  lambda = c(0.2) 
 
-S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.train.add.sig)[4],
-ncol=n.knot.sig*dim(X.train.add.sig)[4])
+S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.add.sig)[4],
+ncol=n.knot.sig*dim(X.add.sig)[4])
 
-for(i in 1:dim(X.train.add.sig)[4]){
+for(i in 1:dim(X.add.sig)[4]){
  for(j in 1:n.knot.sig){
   for(k in 1:n.knot.sig){
      S_lambda.sig[(j+(i-1)*n.knot.sig),(k+(i-1)*n.knot.sig)]=lambda[i]*rad(knots.sig[i,j],knots.sig[i,k])
@@ -245,17 +245,17 @@ S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)
 
 
 #lin+GAM+NN models defined for both location and scale parameters
-X.train.mu=list("X.train.nn.mu"=X.train.nn.mu, "X.train.lin.mu"=X.train.lin.mu,
-               "X.train.add.basis.mu"=X.train.add.basis.mu) #Predictors for mu
-X.train.sig=list("X.train.nn.sig"=X.train.nn.sig, "X.train.lin.sig"=X.train.lin.sig,
-               "X.train.add.basis.sig"=X.train.add.basis.sig) #Predictors for sigma
+X.mu=list("X.nn.mu"=X.nn.mu, "X.lin.mu"=X.lin.mu,
+               "X.add.basis.mu"=X.add.basis.mu) #Predictors for mu
+X.sig=list("X.nn.sig"=X.nn.sig, "X.lin.sig"=X.lin.sig,
+               "X.add.basis.sig"=X.add.basis.sig) #Predictors for sigma
 
 
 #Fit the log-normal model. Note that training is not run to completion.
-NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.train.mu,X.train.sig, type="MLP",link.loc="identity",
+NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.mu,X.sig, type="MLP",link.loc="identity",
                           n.ep=50, batch.size=50,
                           widths=c(6,3),seed=1,S_lambda=S_lambda)
-out<-lognormal.NN.predict(X.train.mu=X.train.mu,X.train.sig=X.train.sig,NN.fit$model)
+out<-lognormal.NN.predict(X.mu=X.mu,X.sig=X.sig,NN.fit$model)
 
 print("mu linear coefficients: "); print(round(out$lin.coeff_loc,3))
 print("sig linear coefficients: "); print(round(out$lin.coeff_sig,3))
@@ -276,7 +276,7 @@ print("sig linear coefficients: "); print(round(out$lin.coeff_sig,3))
 # Plot splines for the additive predictors
 
 #Location predictors
-n.add.preds_loc=dim(X.train.add.mu)[length(dim(X.train.add.mu))]
+n.add.preds_loc=dim(X.add.mu)[length(dim(X.add.mu))]
 par(mfrow=c(1,n.add.preds_loc))
 for(i in 1:n.add.preds_loc){
   plt.x=seq(from=min(knots.mu[i,]),to=max(knots.mu[i,]),length=1000)  #Create sequence for x-axis
@@ -293,7 +293,7 @@ for(i in 1:n.add.preds_loc){
 }
 
 #Shape predictors
-n.add.preds_sig=dim(X.train.add.sig)[length(dim(X.train.add.sig))]
+n.add.preds_sig=dim(X.add.sig)[length(dim(X.add.sig))]
 par(mfrow=c(1,n.add.preds_sig))
 for(i in 1:n.add.preds_sig){
   plt.x=seq(from=min(knots.sig[i,]),to=max(knots.sig[i,]),length=1000)  #Create sequence for x-axis

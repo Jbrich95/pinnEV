@@ -6,12 +6,11 @@
 \alias{logistic.NN.predict}
 \title{Logistic regression PINN}
 \usage{
-logistic.NN.train(Y.train, Y.valid = NULL, X.train, type = "MLP",
-  n.ep = 100, batch.size = 100, init.p = NULL, widths = c(6, 3),
-  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
-  S_lambda = NULL)
+logistic.NN.train(Y.train, Y.valid = NULL, X, type = "MLP", n.ep = 100,
+  batch.size = 100, init.p = NULL, widths = c(6, 3), filter.dim = c(3,
+  3), seed = NULL, init.wb_path = NULL, S_lambda = NULL)
 
-logistic.NN.predict(X.train, model)
+logistic.NN.predict(X, model)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation response values, with entries of 0/1 for failure/success.
@@ -21,16 +20,16 @@ The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X.train}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
-\item{\code{X.train.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+\item{X}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
+\item{\code{X.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
-\item{\code{X.train.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
+\item{\code{X.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
 If \code{NULL}, a model without the additive component is built and trained.}
-\item{\code{X.train.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
+\item{\code{X.nn}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no efect.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 }
-Note that \code{X.train} is the predictors for both \code{Y.train} and \code{Y.valid}.}
+Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
 
@@ -52,7 +51,7 @@ final layer has zero initial weights to ensure that the initial probability esti
 
 \item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.train.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.train.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -64,7 +63,7 @@ Build and train a partially-interpretable neural network for a logistic regressi
 {
 Consider a Bernoulli random variable, say \eqn{Z\sim\mbox{Bernoulli}(p)}, with probability mass function \eqn{\Pr(Z=1)=p=1-\Pr(Z=0)=1-p}. Let \eqn{Y\in\{0,1\}} be a univariate Boolean response and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p(\mathbf{x}))} with
+We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p\{\mathbf{x})\}} with
 \deqn{p(\mathbf{x})=h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is the logistic link-function and
 \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively,
 and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is estimated using a neural network.
@@ -94,22 +93,22 @@ dim(preds)=c(500,12,12,10)
 
 #Split predictors into linear, additive and nn. 
 
-X.train.nn=preds[,,,1:5] #Five nn predictors
-X.train.lin=preds[,,,6:8] #Three linear predictors
-X.train.add=preds[,,,9:10] #Two additive predictors
+X.nn=preds[,,,1:5] #Five nn predictors
+X.lin=preds[,,,6:8] #Three linear predictors
+X.add=preds[,,,9:10] #Two additive predictors
 
 # Create toy response data
 
 #Linear contribution
-m_L = 0.3*X.train.lin[,,,1]+0.6*X.train.lin[,,,2]-0.2*X.train.lin[,,,3]
+m_L = 0.3*X.lin[,,,1]+0.6*X.lin[,,,2]-0.2*X.lin[,,,3]
 
 # Additive contribution
-  m_A = 0.1*X.train.add[,,,1]^2+0.2*X.train.add[,,,1]-0.1*X.train.add[,,,2]^2+
-0.1*X.train.add[,,,2]^3-0.5*X.train.add[,,,2]
+  m_A = 0.1*X.add[,,,1]^2+0.2*X.add[,,,1]-0.1*X.add[,,,2]^2+
+0.1*X.add[,,,2]^3-0.5*X.add[,,,2]
 
 #Non-additive contribution - to be estimated by NN
-m_N = exp(-3+X.train.nn[,,,2]+X.train.nn[,,,3])+
-sin(X.train.nn[,,,1]-X.train.nn[,,,2])*(X.train.nn[,,,4]+X.train.nn[,,,5])
+m_N = exp(-3+X.nn[,,,2]+X.nn[,,,3])+
+sin(X.nn[,,,1]-X.nn[,,,2])*(X.nn[,,,4]+X.nn[,,,5])
 
 p=0.5+0.5*tanh((m_L+m_A+m_N)/2) #Logistic link
 Y=apply(p,1:3,function(x) rbinom(1,1,x))
@@ -127,7 +126,7 @@ Y.valid[mask_inds]=-1e5
 
 
 #To build a model with an additive component, we require an array of evaluations of
-#the basis functions for each pre-specified knot and entry to X.train.add
+#the basis functions for each pre-specified knot and entry to X.add
 
 rad=function(x,c){ #Define a basis function. Here we use the radial bases
   out=abs(x-c)^2*log(abs(x-c))
@@ -136,17 +135,17 @@ rad=function(x,c){ #Define a basis function. Here we use the radial bases
 }
 
 n.knot = 5 # set number of knots. Must be the same for each additive predictor
-knots=matrix(nrow=dim(X.train.add)[4],ncol=n.knot)
+knots=matrix(nrow=dim(X.add)[4],ncol=n.knot)
 
 #We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X.train.add)[4]) {
-knots[i,]=quantile(X.train.add[,,,i],probs=seq(0,1,length=n.knot))}
+for( i in 1:dim(X.add)[4]) {
+knots[i,]=quantile(X.add[,,,i],probs=seq(0,1,length=n.knot))}
 
-X.train.add.basis<-array(dim=c(dim(X.train.add),n.knot))
-for( i in 1:dim(X.train.add)[4]) {
+X.add.basis<-array(dim=c(dim(X.add),n.knot))
+for( i in 1:dim(X.add)[4]) {
 for(k in 1:n.knot) {
-X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
-#Evaluate rad at all entries to X.train.add and for all knots
+X.add.basis[,,,i,k]= rad(x=X.add[,,,i],c=knots[i,k])
+#Evaluate rad at all entries to X.add and for all knots
 }}
 
  #Penalty matrix for additive functions
@@ -154,8 +153,8 @@ X.train.add.basis[,,,i,k]= rad(x=X.train.add[,,,i],c=knots[i,k])
 # Set smoothness parameters for first and second additive functions
  lambda = c(0.1,0.1) 
  
-S_lambda=matrix(0,nrow=n.knot*dim(X.train.add)[4],ncol=n.knot*dim(X.train.add)[4])
-for(i in 1:dim(X.train.add)[4]){
+S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
+for(i in 1:dim(X.add)[4]){
  for(j in 1:n.knot){
   for(k in 1:n.knot){
      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
@@ -163,20 +162,20 @@ for(i in 1:dim(X.train.add)[4]){
 }
 }
 
-X.train=list("X.train.nn"=X.train.nn, "X.train.lin"=X.train.lin,
-"X.train.add.basis"=X.train.add.basis)
+X=list("X.nn"=X.nn, "X.lin"=X.lin,
+"X.add.basis"=X.add.basis)
 
 #Build and train a two-layered "lin+GAM+NN" logistic MLP. 
 #Note that training is not run to completion.
-NN.fit<-logistic.NN.train(Y.train, Y.valid,X.train,  type="MLP",n.ep=600,
+NN.fit<-logistic.NN.train(Y.train, Y.valid,X,  type="MLP",n.ep=600,
                       batch.size=100,init.p=0.4, widths=c(6,3),
                       S_lambda=S_lambda)
 
-out<-logistic.NN.predict(X.train,NN.fit$model)
+out<-logistic.NN.predict(X,NN.fit$model)
 hist(out$pred.p) #Plot histogram of predicted probability
 print(out$lin.coeff)
 
-n.add.preds=dim(X.train.add)[length(dim(X.train.add))]
+n.add.preds=dim(X.add)[length(dim(X.add))]
 par(mfrow=c(1,n.add.preds))
 for(i in 1:n.add.preds){
  plt.x=seq(from=min(knots[i,]),to=max(knots[i,]),length=1000)  #Create sequence for x-axis
