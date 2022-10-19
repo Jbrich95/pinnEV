@@ -1,7 +1,7 @@
 #  Partially-Interpretable Neural Networks for modelling Extreme Values
 Methodology for fitting marginal extreme value (and associated) models using partially-interpretable neural networks. Networks are trained using the [R interface to Keras](https://cloud.r-project.org/web/packages/keras/index.html) with custom loss functions taken to be penalised versions of the negative log-likelihood for associated models. For full details on the partially-interpertable deep-learning framework for extreme value analysis, see  Richards, J., Huser, R. <i>A unifying partially-interpretable framework for neural network-based extreme quantile regression</i> (2022).
 
-Note that the partially-interpretable aspect does not need to be incorporated into the models; standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `r Y.train` are handled by setting said values to `r -1e10`. For data where `r -1e10` is within the reasonable range of values of `r Y.train`, the models cannot be readily-applied; in these cases, the data must be scaled/translated.
+Note that the partially-interpretable aspect does not need to be incorporated into the models; standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y.train` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y.train`, the models cannot be readily-applied; in these cases, the data must be scaled  or translated.
 
 ## Implemented models
 * Generalised Pareto distribution (GPD) - see Coles, S.G. (2001) [doi:10.1007/978-1-4471-3675-0](https://doi.org/10.1007%2F978-1-4471-3675-0)

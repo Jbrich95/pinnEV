@@ -6,7 +6,7 @@
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
 #'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
-#' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e5}.
+#' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
 #' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
@@ -147,13 +147,13 @@
 #'
 #' #Create training and validation, respectively.
 #' #We mask 20% of the Y values and use this for validation
-#' #Masked values must be set to -1e5 and are treated as missing whilst training
+#' #Masked values must be set to -1e10 and are treated as missing whilst training
 #'
 #' mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 #'
 #' Y.train<-Y.valid<-Y #Create training and validation, respectively.
-#' Y.train[-mask_inds]=-1e5
-#' Y.valid[mask_inds]=-1e5
+#' Y.train[-mask_inds]=-1e10
+#' Y.valid[mask_inds]=-1e10
 #'
 #'
 #'
@@ -814,7 +814,7 @@ loss<- function( y_true, y_pred) {
 
 
 
-  # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+  # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
   # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
   obsInds=K$sign(K$relu(y_true+1e4))
 
@@ -864,7 +864,7 @@ loss<- function( y_true, y_pred) {
       
       penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
       
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
       obsInds=K$sign(K$relu(y_true+1e4))
       
@@ -912,7 +912,7 @@ loss<- function( y_true, y_pred) {
         
         penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
         
-        # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+        # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
         # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
         obsInds=K$sign(K$relu(y_true+1e4))
         
@@ -962,7 +962,7 @@ loss<- function( y_true, y_pred) {
           penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))
           
           
-          # Find inds of non-missing obs.  Remove missing obs, i.e., -1e5. This is achieved by adding an
+          # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
           # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
           obsInds=K$sign(K$relu(y_true+1e4))
           

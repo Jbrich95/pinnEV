@@ -10,7 +10,7 @@
 #'0.5deg by 0.5deg. Observations are provided by the Fire Program Analysis fire-occurrence database (Short, 2017)
 #'which collates U.S. wildfire records from the reporting systems of federal, state and local organisations.
 #'
-#'Both the response data and the subsequently described predictors have been re-gridded to a regular spatio-temporal grid with missing values set to \code{-1e5}.
+#'Both the response data and the subsequently described predictors have been re-gridded to a regular spatio-temporal grid with missing values set to \code{-1e10}.
 #'For \code{BA} and entries to \code{X}, the first three dimensions correspond to time \eqn{\times} latitude \eqn{\times} longitude with 
 #'their respective ordinate values given in \code{times}, \code{lat} and \code{lon}.
 #'
@@ -59,8 +59,7 @@
 #'
 #' @keywords datasets
 #'
-#'@references Richards, J. and Huser, R. (2022), \emph{High-dimensional extreme quantile regression using 
-#'partially-interpretable neural networks: With application to U.S. wildfires}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#'@references Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
 #'Short, K. C. (2017), \emph{Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508].  
 #'4th Ed. Fort Collins, CO: Forest Service Research Data Archive.}
