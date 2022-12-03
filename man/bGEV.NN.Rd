@@ -17,7 +17,7 @@ bGEV.NN.predict(X.q, X.s, model)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
-Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e5}.
+Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 The first dimension should be the observation indices, e.g., time.
 
 If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
@@ -157,13 +157,13 @@ Y=apply(theta,1:3,function(x) rbGEV(1,q_alpha=x[1],s_beta=x[2],xi=x[3]))
 
 #Create training and validation, respectively.
 #We mask 20\% of the Y values and use this for validation
-#Masked values must be set to -1e5 and are treated as missing whilst training
+#Masked values must be set to -1e10 and are treated as missing whilst training
 
 mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 
 Y.train<-Y.valid<-Y #Create training and validation, respectively.
-Y.train[-mask_inds]=-1e5
-Y.valid[mask_inds]=-1e5
+Y.train[-mask_inds]=-1e10
+Y.valid[mask_inds]=-1e10
 
 
 
