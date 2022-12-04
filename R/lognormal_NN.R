@@ -699,8 +699,8 @@ lognormal_loss <-function(S_lambda=NULL){
       
 
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
    
       y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
@@ -740,8 +740,8 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
@@ -779,8 +779,8 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
@@ -818,8 +818,8 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e9) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1

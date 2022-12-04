@@ -815,8 +815,8 @@ loss<- function( y_true, y_pred) {
 
 
   # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-  # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-  obsInds=K$sign(K$relu(y_true+1e4))
+  # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+  obsInds=K$sign(K$relu(y_true+9e9))
 
   #Find exceedance inds
   exceed=y_true-u
@@ -865,8 +865,8 @@ loss<- function( y_true, y_pred) {
       penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       #Find exceedance inds
       exceed=y_true-u
@@ -913,8 +913,8 @@ loss<- function( y_true, y_pred) {
         penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
         
         # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-        # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-        obsInds=K$sign(K$relu(y_true+1e4))
+        # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+        obsInds=K$sign(K$relu(y_true+9e9))
         
         #Find exceedance inds
         exceed=y_true-u
@@ -963,8 +963,8 @@ loss<- function( y_true, y_pred) {
           
           
           # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-          # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-          obsInds=K$sign(K$relu(y_true+1e4))
+          # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+          obsInds=K$sign(K$relu(y_true+9e9))
           
           #Find exceedance inds
           exceed=y_true-u

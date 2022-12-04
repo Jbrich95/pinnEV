@@ -826,8 +826,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       
       
@@ -870,8 +870,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       
       
@@ -911,8 +911,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       
       
@@ -953,8 +953,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       
       

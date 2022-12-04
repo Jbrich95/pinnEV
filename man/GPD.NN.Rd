@@ -12,7 +12,7 @@ GPD.NN.train(Y.train, Y.valid = NULL, X, u = NULL, type = "MLP",
   filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
   S_lambda = NULL)
 
-GPD.NN.predict(X, u, offset = NULL, model)
+GPD.NN.predict(X, u, model, offset = NULL)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
@@ -46,7 +46,7 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 
 \item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
 
-\item{init.scale, init.xi}{sets the initial \eqn{sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.}
+\item{init.scale, init.xi}{sets the initial \eqn{\sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.}
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
@@ -74,13 +74,13 @@ Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a
 For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}},
 with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma_u(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with \eqn{\sigma_u(\mathbf{x})} dependent on predictors \eqn{\mathbf{x}}. If \code{re.par==FALSE}, then we model
-\deqn{\sigma_u (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
-where \eqn{\eta_0} is a constant intercept and \eqn{C(s,t)} is an offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model
-\deqn{\sigma (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
+\deqn{\sigma_u (\mathbf{x})=C(\mathbf{x})\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
+where \eqn{\eta_0} is a constant intercept and \eqn{C(\mathbf{x})>0} is a fixed offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model
+\deqn{\sigma (\mathbf{x})=C(\mathbf{x})\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
 \eqn{\sigma_u(\mathbf{x})=\sigma(\mathbf{x})+u(\mathbf{x})\xi}. The unknown functions \eqn{m_L} and
 \eqn{m_A} are estimated using linear functions and splines, respectively, and are
 both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
-(currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(s,t)=1} for all \eqn{(s,t)}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(s,t)} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
+(currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 
 For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma_u=b} and \eqn{\xi=s}.
 
@@ -213,7 +213,9 @@ print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 #NN.fit$model \%>\% save_model_tf("model_GPD")
 #To load model, run
 #model  <- load_model_tf("model_GPD",
-#custom_objects=list("GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F)))
+#custom_objects=list(
+#"GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F))
+#)
 
 
 # Plot splines for the additive predictors

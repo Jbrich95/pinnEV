@@ -27,7 +27,7 @@
 #' @param offset an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.scale,init.xi sets the initial \eqn{sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.
+#' @param init.scale,init.xi sets the initial \eqn{\sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial scale and shape estimates are \code{ init.scale} and \code{init.xi}, respectively,  across all dimensions.
@@ -44,13 +44,13 @@
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}},
 #'  with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 #' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma_u(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with \eqn{\sigma_u(\mathbf{x})} dependent on predictors \eqn{\mathbf{x}}. If \code{re.par==FALSE}, then we model
-#' \deqn{\sigma_u (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
-#' where \eqn{\eta_0} is a constant intercept and \eqn{C(s,t)} is an offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model  
-#' \deqn{\sigma (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
+#' \deqn{\sigma_u (\mathbf{x})=C(\mathbf{x})\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
+#' where \eqn{\eta_0} is a constant intercept and \eqn{C(\mathbf{x})>0} is a fixed offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model  
+#' \deqn{\sigma (\mathbf{x})=C(\mathbf{x})\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
 #' \eqn{\sigma_u(\mathbf{x})=\sigma(\mathbf{x})+u(\mathbf{x})\xi}. The unknown functions \eqn{m_L} and
 #' \eqn{m_A} are estimated using linear functions and splines, respectively, and are
 #' both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
-#' (currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(s,t)=1} for all \eqn{(s,t)}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(s,t)} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
+#' (currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 #'
 #' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma_u=b} and \eqn{\xi=s}.
 #'
@@ -194,7 +194,9 @@
 #' #NN.fit$model %>% save_model_tf("model_GPD")
 #' #To load model, run
 #' #model  <- load_model_tf("model_GPD",
-#' #custom_objects=list("GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F)))
+#' #custom_objects=list(
+#' #"GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F))
+#' #)
 #' 
 #' 
 #' # Plot splines for the additive predictors
@@ -234,8 +236,6 @@
     if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
     
 
-    if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
-    
   if(is.null(init.scale) & is.null(init.wb_path)   ) stop("Inital scale estimate not provided")
   if(is.null(init.xi)  & is.null(init.wb_path) ) stop("Inital shape estimate not provided")
   
@@ -350,7 +350,7 @@
 #' @rdname GPD.NN
 #' @export
 #'
-  GPD.NN.predict=function(X,u, offset=NULL, model)
+  GPD.NN.predict=function(X,u, model,offset=NULL)
 {
   library(tensorflow)
   if(is.null(X)  ) stop("No predictors provided for sigma")
@@ -358,7 +358,6 @@
   
     if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
 
-    if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
@@ -406,8 +405,6 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
 {
   
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
-  
-  if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
   
 
   #Additive input
@@ -510,12 +507,13 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- addBranchsigma  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- nnBranchsigma  #Just nn tower
   
-  #Accommodate offset if available
-  if(!is.null(offset))    sigmaBranchjoined <- layer_add(inputs=c(input_offset,sigmaBranchjoined))
-  
+
   #Apply link functions 
   
   sigmaBranchjoined <- sigmaBranchjoined %>% layer_activation( activation = 'exponential', name = "sigma_activation")
+  
+  #Accommodate offset if available
+  if(!is.null(offset))    qBranchjoined <- layer_multiply(inputs=c(input_offset,sigmaBranchjoined))
   
   input=c()
 

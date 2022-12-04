@@ -7,11 +7,11 @@
 \title{Non-parametric single quantile regression PINN}
 \usage{
 quant.NN.train(Y.train, Y.valid = NULL, X, type = "MLP",
-  link = "identity", tau = NULL, n.ep = 100, batch.size = 100,
-  init.q = NULL, widths = c(6, 3), filter.dim = c(3, 3), seed = NULL,
-  init.wb_path = NULL, S_lambda = NULL)
+  link = "identity", tau = NULL, offset = NULL, n.ep = 100,
+  batch.size = 100, init.q = NULL, widths = c(6, 3), filter.dim = c(3,
+  3), seed = NULL, init.wb_path = NULL, S_lambda = NULL)
 
-quant.NN.predict(X, model)
+quant.NN.predict(X, model, offset = NULL)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
@@ -38,11 +38,13 @@ Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
 
 \item{tau}{quantile level. Must satisfy \code{0 < tau < 1}.}
 
+\item{offset}{an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used for modelling the quantile. If \code{offset=NULL}, then no offset is used (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.}
+
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
 \item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
 
-\item{init.q}{sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.}
+\item{init.q}{sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}. Note that if \code{!is.null(offset)}, then the initial quantile array will be \code{init.q*offset}.}
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
@@ -69,9 +71,9 @@ Build and train a partially-interpretable neural network for non-parametric sing
 Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 We model \eqn{\Pr \{ Y \leq y_\tau (\mathbf{x}) |\mathbf{X}=\mathbf{x}\}=\tau} with
-\deqn{y_\tau (\mathbf{x})=h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is some link-function and \eqn{\eta_0} is a
-constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
-both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network.
+\deqn{y_\tau (\mathbf{x})=C(\mathbf{x})h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is some link-function, \eqn{\eta_0} is a
+constant intercept and \eqn{C(\mathbf{x})} is a fixed offset term (see Richards et al., 2022). The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
+both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network. The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})}.
 
 The model is fitted by minimising the penalised tilted loss over \code{n.ep} training epochs; the loss is given by
 \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
@@ -179,7 +181,7 @@ X=list("X.nn"=X.nn, "X.lin"=X.lin,
 NN.fit<-quant.NN.train(Y.train, Y.valid,X,  type="MLP",link="identity",tau=0.5,n.ep=600,
                       batch.size=100, widths=c(6,3),S_lambda=S_lambda)
 
-out<-quant.NN.predict(X,NN.fit$model)
+out<-quant.NN.predict(X,model=NN.fit$model)
 hist(out$pred.q) #Plot histogram of predicted quantiles
 print(out$lin.coeff)
 
@@ -207,5 +209,9 @@ tau <- 0.5
 
 }
 \references{
+{
 Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+
+Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
+}
 }

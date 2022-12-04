@@ -24,8 +24,9 @@
 #' Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param tau  quantile level. Must satisfy \code{0 < tau < 1}.
+#' @param offset an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used for modelling the quantile. If \code{offset=NULL}, then no offset is used (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.q sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.
+#' @param init.q sets the initial \code{tau}-quantile estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}. Note that if \code{!is.null(offset)}, then the initial quantile array will be \code{init.q*offset}.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial quantile estimate is \code{init.q} across all dimensions.
@@ -40,9 +41,9 @@
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
 #'  We model \eqn{\Pr \{ Y \leq y_\tau (\mathbf{x}) |\mathbf{X}=\mathbf{x}\}=\tau} with
-#' \deqn{y_\tau (\mathbf{x})=h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is some link-function and \eqn{\eta_0} is a
-#' constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
-#' both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network.
+#' \deqn{y_\tau (\mathbf{x})=C(\mathbf{x})h\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}} where \eqn{h} is some link-function, \eqn{\eta_0} is a
+#' constant intercept and \eqn{C(\mathbf{x})} is a fixed offset term (see Richards et al., 2022). The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively, and are
+#' both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network. The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})}.
 #'
 #' The model is fitted by minimising the penalised tilted loss over \code{n.ep} training epochs; the loss is given by
 #' \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
@@ -52,10 +53,11 @@
 #'}
 #' @return \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
 #'
-#' @references
+#' @references{
 #'Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
-#'
+#'Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
+#'}
 #' @examples
 #'
 #'
@@ -156,7 +158,7 @@
 #' NN.fit<-quant.NN.train(Y.train, Y.valid,X,  type="MLP",link="identity",tau=0.5,n.ep=600,
 #'                       batch.size=100, widths=c(6,3),S_lambda=S_lambda)
 #'
-#' out<-quant.NN.predict(X,NN.fit$model)
+#' out<-quant.NN.predict(X,model=NN.fit$model)
 #'hist(out$pred.q) #Plot histogram of predicted quantiles
 
 #' print(out$lin.coeff)
@@ -189,7 +191,7 @@
 #' @rdname quant.NN
 #' @export
 
-quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",tau=NULL,
+quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",tau=NULL,offset=NULL,
                        n.ep=100, batch.size=100,init.q=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
                        S_lambda=NULL)
 {
@@ -198,11 +200,16 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
   if(is.null(X)  ) stop("No predictors provided")
   if(is.null(Y.train)) stop("No training response data provided")
   if(is.null(tau)  ) stop("tau not provided")
+  
 
+
+  print(paste0("Creating ",tau,"-quantile model"))
+  if(!is.null(offset)) print(paste0("Using offset"))
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
 
+  if(is.null(offset)){
   if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn); print("Defining lin+GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin,add_input_q=X.add.basis,  nn_input_q=X.nn),Y.valid)}
   if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis); print("Defining lin+GAM model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin,add_input_q=X.add.basis),Y.valid)}
   if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn); print("Defining lin+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin, nn_input_q=X.nn),Y.valid)}
@@ -210,7 +217,16 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
   if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin); print("Defining fully-linear model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin),Y.valid)}
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis); print("Defining fully-additive model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.add.basis),Y.valid)}
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn); print("Defining fully-NN model for tau-quantile" ) ; if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.nn),Y.valid)}
-  
+  }else if(!is.null(offset)){
+    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,offset); print("Defining lin+GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin,add_input_q=X.add.basis,  nn_input_q=X.nn,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,offset); print("Defining lin+GAM model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin,add_input_q=X.add.basis,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,offset); print("Defining lin+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin, nn_input_q=X.nn,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,offset); print("Defining GAM+NN model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.add.basis,  nn_input_q=X.nn,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,offset); print("Defining fully-linear model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_q=X.lin,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,offset); print("Defining fully-additive model for tau-quantile" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_q=X.add.basis,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,offset); print("Defining fully-NN model for tau-quantile" ) ; if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.nn,offset_input=offset),Y.valid)}
+
+  }
   if(is.null(S_lambda) & !is.null(X.add.basis)){print("No smoothing penalty used")}
 
   if(is.null(X.add.basis)){S_lambda=NULL}
@@ -221,9 +237,10 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
   reticulate::use_virtualenv("myenv", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
-
+  if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
   if(is.null(init.q)) init.q=quantile(Y.train[Y.train!=-1e10],prob=tau)
-  model<-quant.NN.build(X.nn,X.lin,X.add.basis, type, init.q, widths,filter.dim,link,tau)
+  model<-quant.NN.build(X.nn,X.lin,X.add.basis, offset,
+                        type, init.q, widths,filter.dim,link,tau)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
@@ -272,17 +289,19 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
 #' @rdname quant.NN
 #' @export
 #'
-quant.NN.predict=function(X, model)
+quant.NN.predict=function(X, model,offset=NULL)
 {
 
 
 
   if(is.null(X)  ) stop("No predictors provided")
+  
 
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
-
+  
+  if(is.null(offset)){
   if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) pred.q<-model %>% predict(  list(X.lin,X.add.basis,X.nn))
   if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )    pred.q<-model %>% predict( list(X.lin,X.add.basis))
   if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) pred.q<-model %>% predict( list(X.lin,X.nn))
@@ -290,7 +309,16 @@ quant.NN.predict=function(X, model)
   if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pred.q<-model %>% predict(list(X.lin))
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   pred.q<-model %>% predict( list(X.add.basis))
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   pred.q<-model %>% predict( list(X.nn))
-
+  }else if(!is.null(offset)){
+    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) pred.q<-model %>% predict(  list(X.lin,X.add.basis,X.nn,offset))
+    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )    pred.q<-model %>% predict( list(X.lin,X.add.basis,offset))
+    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) pred.q<-model %>% predict( list(X.lin,X.nn,offset))
+    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) pred.q<-model %>% predict( list(X.add.basis,X.nn,offset))
+    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pred.q<-model %>% predict(list(X.lin,offset))
+    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   pred.q<-model %>% predict( list(X.add.basis,offset))
+    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   pred.q<-model %>% predict( list(X.nn,offset))
+    
+  }
   if(!is.null(X.add.basis))  gam.weights<-matrix(t(model$get_layer("add_q")$get_weights()[[1]]),nrow=dim(X.add.basis)[length(dim(X.add.basis))-1],ncol=dim(X.add.basis)[length(dim(X.add.basis))],byrow=T)
 
   if(!is.null(X.add.basis) & !is.null(X.lin)) return(list("pred.q"=pred.q, "lin.coeff"=c(model$get_layer("lin_q")$get_weights()[[1]]),"gam.weights"=gam.weights))
@@ -302,8 +330,14 @@ quant.NN.predict=function(X, model)
 }
 #'
 #'
-quant.NN.build=function(X.nn,X.lin,X.add.basis, type, init.q, widths,filter.dim,link,tau=tau)
+quant.NN.build=function(X.nn,X.lin,X.add.basis, offset, type, init.q, widths,filter.dim,link,tau=tau)
 {
+
+
+  #offset input
+  if(!is.null(offset))  input_offset <- layer_input(shape = dim(offset)[-1], name = 'offset_input')
+  
+
   #Additive input
   if(!is.null(X.add.basis))  input_add<- layer_input(shape = dim(X.add.basis)[-1], name = 'add_input_q')
 
@@ -389,16 +423,22 @@ quant.NN.build=function(X.nn,X.lin,X.add.basis, type, init.q, widths,filter.dim,
 
 
   #Apply link functions
+  #Accommodate offset if available
+
+  
   if(link=="exp") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'exponential', name = "q_activation") else if(link=="linear") qBranchjoined <- qBranchjoined %>% layer_activation( activation = 'identity', name = "q_activation")
 
-
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) model <- keras_model(  inputs = c(input_lin,input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  model <- keras_model(  inputs = c(input_lin,input_add),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) model <- keras_model(  inputs = c(input_lin,input_nn),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_add,input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  model <- keras_model(  inputs = c(input_lin),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_add),    outputs = c(qBranchjoined),name=paste0("quantile") )
-  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  model <- keras_model(  inputs = c(input_nn),   outputs = c(qBranchjoined),name=paste0("quantile") )
+  if(!is.null(offset))    qBranchjoined <- layer_multiply(inputs=c(input_offset,qBranchjoined))
+  
+  input=c()
+  
+  if(!is.null(X.lin) ) input=c(input,input_lin)
+  if(!is.null(X.add.basis) ) input=c(input,input_add)
+  if(!is.null(X.nn) ) input=c(input,input_nn)
+  if(!is.null(offset)) input=c(input,input_offset)
+  
+model <- keras_model(  inputs = input,   outputs = c(qBranchjoined),name=paste0("quantile")) 
+  
 
   print(model)
 
@@ -415,8 +455,8 @@ tilted.loss <- function( tau,S_lambda=NULL) {
   K <- backend()
 
   # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-  # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-  obsInds=K$sign(K$relu(y_true+1e4))
+  # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+  obsInds=K$sign(K$relu(y_true+9e9))
 
   error = y_true - y_pred
   return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds))
@@ -431,8 +471,8 @@ tilted.loss <- function( tau,S_lambda=NULL) {
       
       penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e5) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+1e4))
+      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y_true+9e9))
       
       error = y_true - y_pred
       return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds)+penalty)
