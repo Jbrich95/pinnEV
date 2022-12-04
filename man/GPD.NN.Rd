@@ -7,12 +7,12 @@
 \title{GPD PINN}
 \usage{
 GPD.NN.train(Y.train, Y.valid = NULL, X, u = NULL, type = "MLP",
-  link = "identity", tau = NULL, n.ep = 100, batch.size = 100,
+  offset = NULL, re.par = F, n.ep = 100, batch.size = 100,
   init.scale = NULL, init.xi = NULL, widths = c(6, 3),
   filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
   S_lambda = NULL)
 
-GPD.NN.predict(X, u, model)
+GPD.NN.predict(X, u, offset = NULL, model)
 }
 \arguments{
 \item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
@@ -22,7 +22,7 @@ The first dimension should be the observation indices, e.g., time.
 If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma}. Must contain at least one of the following three named entries:\describe{
+\item{X}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma_u} (or \eqn{\sigma} if \code{re.par==TRUE}). Must contain at least one of the following three named entries:\describe{
 \item{\code{X.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension then \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
 \item{\code{X.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
@@ -38,11 +38,15 @@ Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
 the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
 
+\item{offset}{an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.}
+
+\item{re.par}{if \code{TRUE}, uses the re-parameterised version of the GPD. Defaults to \code{FALSE}.}
+
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
 \item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
 
-\item{init.scale, init.xi}{sets the initial \eqn{sigma} and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.}
+\item{init.scale, init.xi}{sets the initial \eqn{sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.}
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
@@ -56,7 +60,7 @@ final layer has zero initial weights to ensure that the initial scale and shape 
 
 \item{model}{fitted \code{keras} model. Output from \code{GPD.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
 }
 \value{
 \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
@@ -69,14 +73,16 @@ Build and train a partially-interpretable neural network for fitting a GPD model
 Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}},
 with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with
-\deqn{\sigma (\mathbf{x})=\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}}
-where \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and
+For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma_u(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with \eqn{\sigma_u(\mathbf{x})} dependent on predictors \eqn{\mathbf{x}}. If \code{re.par==FALSE}, then we model
+\deqn{\sigma_u (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
+where \eqn{\eta_0} is a constant intercept and \eqn{C(s,t)} is an offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model
+\deqn{\sigma (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
+\eqn{\sigma_u(\mathbf{x})=\sigma(\mathbf{x})+u(\mathbf{x})\xi}. The unknown functions \eqn{m_L} and
 \eqn{m_A} are estimated using linear functions and splines, respectively, and are
 both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
-(currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
+(currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(s,t)=1} for all \eqn{(s,t)}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(s,t)} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 
-For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma=b} and \eqn{\xi=s}.
+For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma_u=b} and \eqn{\xi=s}.
 
 The model is fitted by minimising the negative log-likelihood associated with the GPD model over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
@@ -196,10 +202,10 @@ X=list("X.nn"=X.nn, "X.lin"=X.lin,
 #We treat u as fixed and known. In an application, u can be estimated using quant.NN.train.
 
 #Fit the GPD model for exceedances above u. Note that training is not run to completion.
-fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP",
+NN.fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP", re.par=F,
                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
                     widths=c(6,3),seed=1,S_lambda=S_lambda)
-out<-GPD.NN.predict(X=X,u=u,fit$model)
+out<-GPD.NN.predict(X=X,u=u,model=NN.fit$model)
 hist(out$pred.sigma) #Plot histogram of predicted sigma
 print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 
@@ -207,7 +213,7 @@ print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 #NN.fit$model \%>\% save_model_tf("model_GPD")
 #To load model, run
 #model  <- load_model_tf("model_GPD",
-#custom_objects=list("GPD_loss_S_lambda___S_lambda_"=GPD_loss(S_lambda=S_lambda)))
+#custom_objects=list("GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F)))
 
 
 # Plot splines for the additive predictors
@@ -229,8 +235,10 @@ for(i in 1:n.add.preds){
 }
 \references{
 {
-Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/F978-1-4471-3675-0}{doi})
+Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/978-1-4471-3675-0}{doi})
 
-Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581})
+
+Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
 }
 }

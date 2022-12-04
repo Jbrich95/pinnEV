@@ -62,13 +62,13 @@
 #'
 #'@references 
 #'
-#'Bontemps, S., Boettcher, M., Brockmann, C., Kirches, G., Lamarche, C., Radoux, J., Santoro, M., Vanbogaert, E., Wegmüller, U., Herold, M., Achard, F., Ramoino, F., Arino,O., and Defourny, P. (2015). \emph{Multi-year global land cover mapping at 300 M and characterization for climate modelling: Achievements of the land cover component of the ESA climate change initiative.} The International Archives of Photogrammetry, Remote Sensing and Spatial Information Sciences, 40(7):323
+#'Bontemps, S., Boettcher, M., Brockmann, C., Kirches, G., Lamarche, C., Radoux, J., Santoro, M., Vanbogaert, E., Wegmüller, U., Herold, M., Achard, F., Ramoino, F., Arino,O., and Defourny, P. (2015). \emph{Multi-year global land cover mapping at 300 M and characterization for climate modelling: Achievements of the land cover component of the ESA climate change initiative.} The International Archives of Photogrammetry, Remote Sensing and Spatial Information Sciences, 40(7):323.(\href{https://doi.org/10.5194/isprsarchives-XL-7-W3-323-2015}{doi})
 #'
-#'Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicola s,J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., and Tépaut, J.-N. (2019). \emph{ERA5 monthly averaged data on single levels from 1959 to present.} Copernicus Climate Change Service (C3S) Climate Data Store (CDS), 10:252–266.
+#'Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicola s,J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., and Tépaut, J.-N. (2019). \emph{ERA5 monthly averaged data on single levels from 1959 to present.} Copernicus Climate Change Service (C3S) Climate Data Store (CDS), 10:252–266. (\href{https://doi.org/10.24381/cds.f17050d7}{doi})
 #'
-#'Lizundia-Loiola, J., Otón, G., Ramo, R., and Chuvieco, E. (2020). \emph{A spatio-temporal active-fire clustering approach for global burned area mapping at 250 m from MODIS data.} Remote Sensing of Environment, 236:111493.
+#'Lizundia-Loiola, J., Otón, G., Ramo, R., and Chuvieco, E. (2020). \emph{A spatio-temporal active-fire clustering approach for global burned area mapping at 250 m from MODIS data.} Remote Sensing of Environment, 236:111493. (\href{https://doi.org/10.1016/j.rse.2019.111493}{doi})
 #'
-#'Otón, G., Pereira, J. M. C., Silva, J. M. N., and Chuvieco, E. (2021). \emph{Analysis of trends in the FireCCI global long term burned area product (1982–2018).} Fire, 4(4).
+#'Otón, G., Pereira, J. M. C., Silva, J. M. N., and Chuvieco, E. (2021). \emph{Analysis of trends in the FireCCI global long term burned area product (1982–2018).} Fire, 4(4). (\href{https://doi.org/10.3390/fire4040074}{doi})
 #'
 #'Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
 #'

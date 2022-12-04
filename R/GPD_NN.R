@@ -13,7 +13,7 @@
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
 #'@param u an array with the same dimension as \code{Y.train}. Gives the threshold used to create exceedances of \code{Y.train}, see below. Note that \code{u} is applied to both \code{Y.train} and \code{Y.valid}.
-#' @param X  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma}. Must contain at least one of the following three named entries:\describe{
+#' @param X  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{\sigma_u} (or \eqn{\sigma} if \code{re.par==TRUE}). Must contain at least one of the following three named entries:\describe{
 #' \item{\code{X.lin}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension then \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l\geq 0} 'linear' predictor values.}
 #' \item{\code{X.add.basis}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
@@ -23,9 +23,11 @@
 #' The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l-a\geq 0} 'non-additive' predictor values.}
 #' }
 #' Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
+#' @param re.par if \code{TRUE}, uses the re-parameterised version of the GPD. Defaults to \code{FALSE}.
+#' @param offset an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.
 #' @param n.ep number of epochs used for training. Defaults to 1000.
 #' @param batch.size batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.
-#' @param init.scale,init.xi sets the initial \eqn{sigma} and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.
+#' @param init.scale,init.xi sets the initial \eqn{sigma_u} (or \eqn{\sigma}) and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied. Note that if \code{!is.null(offset)}, then the initial scale parameter array will be \code{init.scale*offset}.
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial scale and shape estimates are \code{ init.scale} and \code{init.xi}, respectively,  across all dimensions.
@@ -33,7 +35,7 @@
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{GPD.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
 
 #'@name GPD.NN
 
@@ -41,14 +43,16 @@
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
 #' For integers \eqn{l\geq 0,a \geq 0} and \eqn{0\leq l+a \leq d}, let \eqn{\mathbf{X}_L, \mathbf{X}_A} and \eqn{\mathbf{X}_N} be distinct sub-vectors of \eqn{\mathbf{X}},
 #'  with observations of each component denoted \eqn{\mathbf{x}_L, \mathbf{x}_A} and \eqn{\mathbf{x}_N}, respectively; the lengths of the sub-vectors are \eqn{l,a} and \eqn{d-l-a}, respectively.
-#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with
-#' \deqn{\sigma (\mathbf{x})=\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\}}
-#' where \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and
+#' For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{\{Y-u(\mathbf{x})\}|\mathbf{X}=\mathbf{x}\sim\mbox{GPD}\{\sigma_u(\mathbf{x}),\xi;u(\mathbf{x})\}} for \eqn{\xi\in(0,1)} with \eqn{\sigma_u(\mathbf{x})} dependent on predictors \eqn{\mathbf{x}}. If \code{re.par==FALSE}, then we model
+#' \deqn{\sigma_u (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},}
+#' where \eqn{\eta_0} is a constant intercept and \eqn{C(s,t)} is an offset term; if \code{re.par==TRUE}, we use the re-parameterisation proposed by Richards et al. (2022), and instead model  
+#' \deqn{\sigma (\mathbf{x})=C(s,t)\exp\{\eta_0+m_L(\mathbf{x}_L)+m_A(\mathbf{x}_A)+m_N(\mathbf{x}_N)\},} and set
+#' \eqn{\sigma_u(\mathbf{x})=\sigma(\mathbf{x})+u(\mathbf{x})\xi}. The unknown functions \eqn{m_L} and
 #' \eqn{m_A} are estimated using linear functions and splines, respectively, and are
 #' both returned as outputs by \code{GPD.NN.predict}; \eqn{m_N} is estimated using a neural network
-#' (currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
+#' (currently the same architecture is used for both parameters). The offset term is, by default, \eqn{C(s,t)=1} for all \eqn{(s,t)}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(s,t)} (see Richards et al., 2022). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
 #'
-#' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma=b} and \eqn{\xi=s}.
+#' For details of the generalised Pareto distribution, see \code{help(pgpd)}. Note we use the parameterisation \eqn{u=a}, \eqn{\sigma_u=b} and \eqn{\xi=s}.
 #'
 #' The model is fitted by minimising the negative log-likelihood associated with the GPD model over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
@@ -58,10 +62,14 @@
 #' @return \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
 #'
 #'@references{
-#' Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/F978-1-4471-3675-0}{doi})
+#' Coles, S. G. (2001), \emph{An Introduction to Statistical Modeling of Extreme Values}. Volume 208, Springer. (\href{https://doi.org/10.1007/978-1-4471-3675-0}{doi})
 #' 
-#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#' Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581})
+#' 
+#' Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
 #'}
+#'
+#'
 #' @examples
 #'
 #'#Apply model to toy data
@@ -175,10 +183,10 @@
 #' #We treat u as fixed and known. In an application, u can be estimated using quant.NN.train.
 #' 
 #' #Fit the GPD model for exceedances above u. Note that training is not run to completion.
-#' fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP",
+#' NN.fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP", re.par=F,
 #'                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
 #'                     widths=c(6,3),seed=1,S_lambda=S_lambda)
-#' out<-GPD.NN.predict(X=X,u=u,fit$model)
+#' out<-GPD.NN.predict(X=X,u=u,model=NN.fit$model)
 #' hist(out$pred.sigma) #Plot histogram of predicted sigma
 #' print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
 #' 
@@ -186,7 +194,7 @@
 #' #NN.fit$model %>% save_model_tf("model_GPD")
 #' #To load model, run
 #' #model  <- load_model_tf("model_GPD",
-#' #custom_objects=list("GPD_loss_S_lambda___S_lambda_"=GPD_loss(S_lambda=S_lambda)))
+#' #custom_objects=list("GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F)))
 #' 
 #' 
 #' # Plot splines for the additive predictors
@@ -212,7 +220,7 @@
 #' @export
 
 
-  GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",link="identity",tau=NULL,
+  GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NULL,re.par=F,
                           n.ep=100, batch.size=100,init.scale=NULL,init.xi=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
   {
     
@@ -222,24 +230,65 @@
   if(is.null(X)  ) stop("No predictors provided for sigma")
   if(is.null(Y.train)) stop("No training response data provided")
   if(is.null(u)) stop("No threshold u provided")
-  
+    
+    if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
+    
+
+    if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
+    
   if(is.null(init.scale) & is.null(init.wb_path)   ) stop("Inital scale estimate not provided")
   if(is.null(init.xi)  & is.null(init.wb_path) ) stop("Inital shape estimate not provided")
   
   
   print(paste0("Creating GPD model"))
+  if(re.par==T)  print(paste0("Creating re-parameterised GPD model"))
+ if(!is.null(offset)) print(paste0("Using offset scale parameter"))
+
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
   
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u),Y.valid)}
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u),Y.valid)}
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
-  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u),Y.valid)}
-  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u),Y.valid)}
-  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u),Y.valid)}
-  
+  if(!is.null(offset)){
+  if(re.par==F){
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+  }
+  if(re.par==T){
+    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
+    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+  }
+  }else if(is.null(offset)){
+    if(re.par==F){
+      if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u); print("Defining lin+GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u); print("Defining lin+GAM model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u); print("Defining lin+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u); print("Defining GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u); print("Defining fully-linear model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u); print("Defining fully-additive model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u); print("Defining fully-NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u),Y.valid)}
+    }
+    if(re.par==T){
+      if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
+      if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u),Y.valid)}
+    }
+    
+    
+  }
   if(is.null(S_lambda) & !is.null(X.add.basis)){print("No smoothing penalty used")}
   if(is.null(X.add.basis)){S_lambda=NULL}
   
@@ -251,13 +300,15 @@
   if(!is.null(seed)) tf$random$set_seed(seed)
   
   if(length(dim(u))!=length(dim(Y.train))+1) dim(u)=c(dim(u),1)
+  if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
+  
   model<-GPD.NN.build(X.nn,X.lin,X.add.basis,
-                         u,type,init.scale,init.xi, widths,filter.dim)
+                         u,offset,type,init.scale,init.xi, widths,filter.dim)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
     optimizer="adam",
-    loss = GPD_loss(S_lambda=S_lambda),
+    loss = GPD_loss(S_lambda=S_lambda,re.par=re.par),
     run_eagerly=T
   )
   
@@ -299,26 +350,38 @@
 #' @rdname GPD.NN
 #' @export
 #'
-  GPD.NN.predict=function(X,u, model)
+  GPD.NN.predict=function(X,u, offset=NULL, model)
 {
   library(tensorflow)
   if(is.null(X)  ) stop("No predictors provided for sigma")
+    print("Note that sigma is determined by the parameterisation. If model fitted with re.par == FALSE, sigma here is sigma_u")
+  
+    if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
 
-  
-  
+    if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
   
-  
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u)
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u)
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  train.data= list(X.lin,X.nn,u)
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) train.data= list(X.add.basis,X.nn,u)
-  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,u)
-  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.add.basis,u)
-  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.nn,u)
-  
+  if(!is.null(offset)){
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u,offset)
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u,offset)
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  train.data= list(X.lin,X.nn,u,offset)
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) train.data= list(X.add.basis,X.nn,u,offset)
+  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,u,offset)
+  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.add.basis,u,offset)
+  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.nn,u,offset)
+  }else{
+    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u)
+    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u)
+    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  train.data= list(X.lin,X.nn,u)
+    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) train.data= list(X.add.basis,X.nn,u)
+    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,u)
+    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.add.basis,u)
+    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.nn,u)
+    
+    
+  }
 
   
   predictions<-model %>% predict( train.data)
@@ -338,9 +401,15 @@
 #'
 #'
 GPD.NN.build=function(X.nn,X.lin,X.add.basis,
-                         u,
+                         u,offset,
                          type,init.scale,init.xi, widths,filter.dim)
 {
+  
+  if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
+  
+  if(!is.null(offset)) offset = log(offset) #Transform as link function is exponential
+  
+
   #Additive input
   if(!is.null(X.add.basis))  input_add_sigma<- layer_input(shape = dim(X.add.basis)[-1], name = 'add_input_sigma')
   
@@ -353,6 +422,9 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   
   #Threshold input
   input_u <- layer_input(shape = dim(u)[-1], name = 'u_input')
+  
+  #offset input
+  if(!is.null(offset))  input_offset <- layer_input(shape = dim(offset)[-1], name = 'offset_input')
   
   #Create xi branch
   
@@ -438,7 +510,11 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- addBranchsigma  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- nnBranchsigma  #Just nn tower
   
-  #Apply link functions
+  #Accommodate offset if available
+  if(!is.null(offset))    sigmaBranchjoined <- layer_add(inputs=c(input_offset,sigmaBranchjoined))
+  
+  #Apply link functions 
+  
   sigmaBranchjoined <- sigmaBranchjoined %>% layer_activation( activation = 'exponential', name = "sigma_activation")
   
   input=c()
@@ -447,7 +523,7 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   if(!is.null(X.add.basis) ) input=c(input,input_add_sigma)
   if(!is.null(X.nn) ) input=c(input,input_nn_sigma)
   input=c(input,input_u)
-  
+  if(!is.null(offset)) input=c(input,input_offset)
   
   output <- layer_concatenate(c(input_u,sigmaBranchjoined, xiBranch),name="Combine_parameter_tensors")
   
@@ -459,7 +535,7 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
 }
 
 
-GPD_loss <- function(S_lambda=NULL){
+GPD_loss <- function(S_lambda=NULL,re.par=F){
   
   if(is.null(S_lambda)){
     loss<-function( y_true, y_pred) {
@@ -467,16 +543,23 @@ GPD_loss <- function(S_lambda=NULL){
       K <- backend()
       
       u=y_pred[all_dims(),1]
-      sig=y_pred[all_dims(),2]
+      scale=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       y=K$relu(y_true-u)
       
+      if(re.par==T){
+        sigu=scale+xi*u
+      }else{
+        sigu=scale
+      }
+      
+      sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+      ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
       
       #Uses non-zero response values only
-      ll2= K$log(sig) *K$sign(ll1)
+      ll2= K$log(sigu) *K$sign(ll1)
       
       return(-(K$sum(ll1+ll2)))
     }
@@ -492,16 +575,23 @@ GPD_loss <- function(S_lambda=NULL){
     penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
     
     u=y_pred[all_dims(),1]
-    sig=y_pred[all_dims(),2]
+    scale=y_pred[all_dims(),2]
     xi=y_pred[all_dims(),3]
     y=K$relu(y_true-u)
     
+    if(re.par==T){
+      sigu=scale+xi*u
+    }else{
+      sigu=scale
+    }
+    
+    sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
     
     #Evaluate log-likelihood
-    ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+    ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
     
     #Uses non-zero response values only
-    ll2= K$log(sig) *K$sign(ll1)
+    ll2= K$log(sigu) *K$sign(ll1)
     
     return(penalty-(K$sum(ll1+ll2)))
     

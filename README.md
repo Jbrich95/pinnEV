@@ -4,8 +4,8 @@ Methodology for fitting marginal extreme value (and associated) models using par
 Note that the partially-interpretable aspect does not need to be incorporated into the models; standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y.train` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y.train`, the models cannot be readily-applied; in these cases, the data must be scaled  or translated.
 
 ## Implemented models
-* Generalised Pareto distribution (GPD) - see Coles, S.G. (2001) [doi:10.1007/978-1-4471-3675-0](https://doi.org/10.1007%2F978-1-4471-3675-0)
-* Re-parameterised offset GPD - see Richards et al., (2022) 
+* Generalised Pareto distribution (GPD) - see Coles, S.G. (2001) [doi:10.1007/978-1-4471-3675-0](https://doi.org/10.1007/978-1-4471-3675-0)
+* Re-parameterised GPD (With offset scale) - see Richards et al., (2022) 
 * Blended Generalised Extreme Value (bGEV) distribution - see Castro-Camilo, D., et al. (2022) [doi:10.1002/env.2742](https://doi.org/10.1002/env.2742)
 * bGEV point process (bGEV-PP) - see Richards, J. and Huser, R. (2022) [arXiv:2208.07581](https://arxiv.org/abs/2208.07581)
 * Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143)
