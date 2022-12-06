@@ -23,7 +23,6 @@ install_github("https://github.com/Jbrich95/pinnEV")
 #Do not use library(reticulate) as this auto-initialises a Python environment. Instead call functions directly
 
 library(keras)
-library(tfprobability)
 #Create a virtual envionment 'myenv' with Python3.7. Install tensorflow and tfprobability within this environment.
 reticulate::virtualenv_create(envname = 'myenv',  python= 'python3.7')
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
