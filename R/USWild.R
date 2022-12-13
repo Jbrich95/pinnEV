@@ -59,7 +59,7 @@
 #'
 #' @keywords datasets
 #'
-#'@references Richards, J. and Huser, R. (2022), \emph{A unifying partially-interpretable framework for neural network-based extreme quantile regression}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#'@references Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
 #'Short, K. C. (2017), \emph{Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508].  
 #'4th Ed. Fort Collins, CO: Forest Service Research Data Archive.}

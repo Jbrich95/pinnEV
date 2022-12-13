@@ -75,6 +75,6 @@ Lizundia-Loiola, J., Otón, G., Ramo, R., and Chuvieco, E. (2020). \emph{A spati
 
 Otón, G., Pereira, J. M. C., Silva, J. M. N., and Chuvieco, E. (2021). \emph{Analysis of trends in the FireCCI global long term burned area product (1982–2018).} Fire, 4(4). (\href{https://doi.org/10.3390/fire4040074}{doi})
 
-Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.}
+Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
 }
 \keyword{datasets}
