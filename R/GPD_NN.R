@@ -543,7 +543,9 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
       u=y_pred[all_dims(),1]
       scale=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
-      y=K$relu(y_true-u)
+      
+      y <- y_true[all_dims(),1]
+      y=K$relu(y-u)
       
       if(re.par==T){
         sigu=scale+xi*u
@@ -575,7 +577,8 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
     u=y_pred[all_dims(),1]
     scale=y_pred[all_dims(),2]
     xi=y_pred[all_dims(),3]
-    y=K$relu(y_true-u)
+    y <- y_true[all_dims(),1]
+    y=K$relu(y-u)
     
     if(re.par==T){
       sigu=scale+xi*u

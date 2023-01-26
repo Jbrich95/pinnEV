@@ -822,12 +822,11 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      
-      
+      y <- y_true[all_dims(),1]
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      obsInds=K$sign(K$relu(y+9e9))
       
       
       
@@ -837,8 +836,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=s_b+(1-obsInds)
       
       
-      l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
       
       l2=K$log(l2+(1-obsInds))*obsInds
       
@@ -857,6 +856,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
+      y <- y_true[all_dims(),1]
+      
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
       S_lambda.q.tensor=K$constant(S_lambda.q)
@@ -871,7 +872,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      obsInds=K$sign(K$relu(y+9e9))
       
       
       
@@ -881,8 +882,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=s_b+(1-obsInds)
       
       
-      l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
       
       l2=K$log(l2+(1-obsInds))*obsInds
       
@@ -901,6 +902,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
+      y <- y_true[all_dims(),1]
       
       t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
       gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
@@ -912,7 +914,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      obsInds=K$sign(K$relu(y+9e9))
       
       
       
@@ -922,8 +924,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=s_b+(1-obsInds)
       
       
-      l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
       
       l2=K$log(l2+(1-obsInds))*obsInds
       
@@ -942,6 +944,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
+      y <- y_true[all_dims(),1]
       
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
@@ -954,7 +957,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      obsInds=K$sign(K$relu(y+9e9))
       
       
       
@@ -964,8 +967,8 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=s_b+(1-obsInds)
       
       
-      l1=logH(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
+      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
       
       l2=K$log(l2+(1-obsInds))*obsInds
       

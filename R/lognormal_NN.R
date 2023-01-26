@@ -697,12 +697,13 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
-
+      y <- y_true[all_dims(),1]
+      y=K$relu(y-u)
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y+9e9))
    
-      y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
+      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
       mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
       
@@ -728,6 +729,9 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
+      y <- y_true[all_dims(),1]
+      y=K$relu(y-u)
+            
       t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
       gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
       S_lambda.mu.tensor=K$constant(S_lambda.mu)
@@ -740,10 +744,10 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y+9e9))
       
-      y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
+      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
       mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
       
@@ -769,6 +773,9 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
+      y <- y_true[all_dims(),1]
+      y=K$relu(y-u)
+           
       t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
       gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
       S_lambda.sig.tensor=K$constant(S_lambda.sig)
@@ -779,10 +786,10 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y+9e9))
       
-      y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
+      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
       mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
       
@@ -808,6 +815,9 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
 
+      y <- y_true[all_dims(),1]
+      y=K$relu(y-u)
+      
       t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
       gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
       S_lambda.mu.tensor=K$constant(S_lambda.mu)
@@ -818,10 +828,10 @@ lognormal_loss <-function(S_lambda=NULL){
       
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e9) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      # arbitrarily large (<1e9) value to y and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y+9e9))
       
-      y=K$relu(y_true)+(1-obsInds)*1 #Sets all missing response values to 1
+      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
       sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
       mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
       

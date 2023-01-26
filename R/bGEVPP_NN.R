@@ -811,15 +811,15 @@ loss<- function( y_true, y_pred) {
   s_b=y_pred[all_dims(),3]
   xi=y_pred[all_dims(),4]
 
-
+  y <- y_true[all_dims(),1]
 
 
   # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-  # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-  obsInds=K$sign(K$relu(y_true+9e9))
+  # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+  obsInds=K$sign(K$relu(y+9e9))
 
   #Find exceedance inds
-  exceed=y_true-u
+  exceed=y-u
   exceedInds=K$sign(K$relu(exceed))
 
 
@@ -829,12 +829,12 @@ loss<- function( y_true, y_pred) {
   s_b=s_b+(1-obsInds)
 
   #Use exceedance only only
-  lam=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
+  lam=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
   loglam=K$log(lam+(1-exceedInds))*exceedInds
 
 
 
-  #Use all values of y_true i.e., non-exceedances + exceedances.
+  #Use all values of y i.e., non-exceedances + exceedances.
 
   LAM=-logH(u,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds) #1/12 as 12 obs per year
   return(-(
@@ -854,6 +854,8 @@ loss<- function( y_true, y_pred) {
       s_b=y_pred[all_dims(),3]
       xi=y_pred[all_dims(),4]
       
+      y <- y_true[all_dims(),1]
+      
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
       S_lambda.q.tensor=K$constant(S_lambda.q)
@@ -865,11 +867,11 @@ loss<- function( y_true, y_pred) {
       penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
+      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+      obsInds=K$sign(K$relu(y+9e9))
       
       #Find exceedance inds
-      exceed=y_true-u
+      exceed=y-u
       exceedInds=K$sign(K$relu(exceed))
       
       
@@ -879,12 +881,12 @@ loss<- function( y_true, y_pred) {
       s_b=s_b+(1-obsInds)
       
       #Use exceedance only only
-      lam=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
+      lam=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
       loglam=K$log(lam+(1-exceedInds))*exceedInds
       
       
       
-      #Use all values of y_true i.e., non-exceedances + exceedances.
+      #Use all values of y i.e., non-exceedances + exceedances.
       
       LAM=-logH(u,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds) #1/12 as 12 obs per year
       return(penalty-(
@@ -905,7 +907,7 @@ loss<- function( y_true, y_pred) {
         s_b=y_pred[all_dims(),3]
         xi=y_pred[all_dims(),4]
         
-      
+        y <- y_true[all_dims(),1]
         t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
         gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
         S_lambda.s.tensor=K$constant(S_lambda.s)
@@ -913,11 +915,11 @@ loss<- function( y_true, y_pred) {
         penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
         
         # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-        # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-        obsInds=K$sign(K$relu(y_true+9e9))
+        # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+        obsInds=K$sign(K$relu(y+9e9))
         
         #Find exceedance inds
-        exceed=y_true-u
+        exceed=y-u
         exceedInds=K$sign(K$relu(exceed))
         
         
@@ -927,12 +929,12 @@ loss<- function( y_true, y_pred) {
         s_b=s_b+(1-obsInds)
         
         #Use exceedance only only
-        lam=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
+        lam=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
         loglam=K$log(lam+(1-exceedInds))*exceedInds
         
         
         
-        #Use all values of y_true i.e., non-exceedances + exceedances.
+        #Use all values of y i.e., non-exceedances + exceedances.
         
         LAM=-logH(u,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds) #1/12 as 12 obs per year
         return(penalty-(
@@ -953,7 +955,7 @@ loss<- function( y_true, y_pred) {
           s_b=y_pred[all_dims(),3]
           xi=y_pred[all_dims(),4]
           
-          
+          y <- y_true[all_dims(),1]
           t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
           gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
           S_lambda.q.tensor=K$constant(S_lambda.q)
@@ -963,11 +965,11 @@ loss<- function( y_true, y_pred) {
           
           
           # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-          # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-          obsInds=K$sign(K$relu(y_true+9e9))
+          # arbitrarily large (<1e10) value to y and then taking the sign ReLu
+          obsInds=K$sign(K$relu(y+9e9))
           
           #Find exceedance inds
-          exceed=y_true-u
+          exceed=y-u
           exceedInds=K$sign(K$relu(exceed))
           
           
@@ -977,12 +979,12 @@ loss<- function( y_true, y_pred) {
           s_b=s_b+(1-obsInds)
           
           #Use exceedance only only
-          lam=lambda(y_true,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
+          lam=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds)
           loglam=K$log(lam+(1-exceedInds))*exceedInds
           
           
           
-          #Use all values of y_true i.e., non-exceedances + exceedances.
+          #Use all values of y i.e., non-exceedances + exceedances.
           
           LAM=-logH(u,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds) #1/12 as 12 obs per year
           return(penalty-(
