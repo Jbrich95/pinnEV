@@ -57,7 +57,7 @@ final layer has zero initial weights to ensure that the initial location, spread
 
 \item{alpha, beta, p_a, p_b}{hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.}
 
-\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.q)}; similarly for the second element and \code{!is.null(X.add.basis.s)}.}
+\item{S_lambda}{list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 

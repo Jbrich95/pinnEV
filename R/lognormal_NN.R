@@ -34,7 +34,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.mu)}; similarly for the second element and \code{!is.null(X.add.basis.sig)}. 
+#' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{\mu}; similarly for the second element and \eqn{\sigma}. 
 
 #'@name lognormal.NN
 

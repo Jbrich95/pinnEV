@@ -33,7 +33,7 @@
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{logistic.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
 
 
 #' @details{

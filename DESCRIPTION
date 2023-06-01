@@ -9,6 +9,5 @@ License: GPL
 Encoding: UTF-8
 Depends: R (>= 3.4)
 Imports: reticulate, keras, tfprobability, stats, evd
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE, old_usage = TRUE)
-

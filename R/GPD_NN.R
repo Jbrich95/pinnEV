@@ -35,7 +35,7 @@
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{GPD.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
 
 #'@name GPD.NN
 

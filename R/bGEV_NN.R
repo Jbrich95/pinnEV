@@ -35,7 +35,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.q)}; similarly for the second element and \code{!is.null(X.add.basis.s)}. 
+#' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}. 
 
 #'@name bGEV.NN
 

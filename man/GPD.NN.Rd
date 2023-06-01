@@ -60,7 +60,7 @@ final layer has zero initial weights to ensure that the initial scale and shape 
 
 \item{model}{fitted \code{keras} model. Output from \code{GPD.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.}
 }
 \value{
 \code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.

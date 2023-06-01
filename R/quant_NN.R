@@ -35,7 +35,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param link string defining the link function used, see \eqn{h} below. If \code{link=="exp"}, then \eqn{h=\exp(x)}; if \code{link=="identity"}, then \eqn{h(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{quant.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.
+#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
 
 #' @details{
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.

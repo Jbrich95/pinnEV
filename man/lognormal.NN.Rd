@@ -53,7 +53,7 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial location and shape estimates are \code{init.loc} and \code{init.sig}, respectively,  across all dimensions.}
 
-\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.mu)}; similarly for the second element and \code{!is.null(X.add.basis.sig)}.}
+\item{S_lambda}{list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{\mu}; similarly for the second element and \eqn{\sigma}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 

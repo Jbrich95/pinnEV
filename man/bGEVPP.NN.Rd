@@ -61,7 +61,7 @@ final layer has zero initial weights to ensure that the initial location, spread
 
 \item{n_b}{number of observations per block, e.g., if observations correspond to months and the interest is annual maxima, then \code{n_b=12}.}
 
-\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \code{!is.null(X.add.basis.q)}; similarly for the second element and \code{!is.null(X.add.basis.s)}.}
+\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 

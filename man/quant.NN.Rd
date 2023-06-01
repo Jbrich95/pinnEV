@@ -58,7 +58,7 @@ final layer has zero initial weights to ensure that the initial quantile estimat
 
 \item{model}{fitted \code{keras} model. Output from \code{quant.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty used.}
+\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.}
 }
 \value{
 \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
