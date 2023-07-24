@@ -14,7 +14,7 @@ Note that the partially-interpretable aspect does not need to be incorporated in
 
 Note that the bGEV and bGEV-PP models are less computationally efficient than the other models due to the complexity of the likelihood; bear that in mind when running the example code!
 
-## Installation
+## Installation - Note that this will install the CPU version of tensorflow
 
 ```r
 library(devtools)
@@ -55,5 +55,6 @@ reticulate::virtualenv_install("myenv",
 * Weight regularisation and dropout
 * New statistical models - Gamma, extendedGPD, mean/median regression
 * Different architecture per parameter
-* Non-stationary xi in GPD and bGEV models 
+* Non-stationary xi in GPD and bGEV models
+* GPU installation
 
