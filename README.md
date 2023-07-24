@@ -14,7 +14,7 @@ Note that the partially-interpretable aspect does not need to be incorporated in
 
 Note that the bGEV and bGEV-PP models are less computationally efficient than the other models due to the complexity of the likelihood; bear that in mind when running the example code!
 
-## Installation - Note that this will install the CPU version of tensorflow
+## Installation 
 
 ```r
 library(devtools)
@@ -33,10 +33,10 @@ reticulate::virtualenv_create(envname = 'myenv',
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
 Sys.setenv(RETICULATE_PYTHON = path) #Set Python interpreter to that installed in myenv
 
-tf_version="2.13.0"
+tf_version="2.10.0" #Replace with "2.10.0-gpu" for GPU version.
 reticulate::use_virtualenv("myenv", required = T)
-reticulate::virtualenv_install("myenv",
-                               packages = "tensorflow", version = tf_version) #Install version of tensorflow in virtual environment
+tensorflow::install_tensorflow(method="virtualenv", envname="myenv",
+                                 version=tf_version) #Install version of tensorflow in virtual environment
 keras::install_keras(method = c("virtualenv"), envname = "myenv") #Install keras
 
 keras::is_keras_available() #Check if keras is available
