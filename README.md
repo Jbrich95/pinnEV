@@ -22,7 +22,7 @@ install_github("https://github.com/Jbrich95/pinnEV")
 
 #Do not use library(reticulate) as this auto-initialises a Python environment. Instead call functions directly
 
-#Create a virtual envionment 'myenv' with Python3.8.10. Install tensorflow, keras and tfprobability within this environment.
+#Create a virtual envionment 'myenv' with Python3.8.10. Install tensorflow, keras, tfprobability and spektral within this environment.
 
 py_version <- "3.8.10"
 #Create a virtual envionment 'myenv' with Python 3.8.10. Install tensorflow  within this environment.
@@ -46,7 +46,9 @@ reticulate::virtualenv_install("myenv",
                                packages = "tensorflow_probability", version="0.14.0")
 tfprobability::install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14.0")
 
-
+#Install spektral - this is for the graph NNs
+reticulate::virtualenv_install("myenv",
+                               packages = "spektral", version="1.3.0")
 ```
 
 ## Coming in future updates 
