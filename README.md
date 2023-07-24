@@ -28,7 +28,7 @@ py_version <- "3.8.10"
 #Create a virtual envionment 'myenv' with Python 3.8.10. Install tensorflow  within this environment.
 reticulate::virtualenv_create(envname = 'myenv',
                               python="/usr/local/bin/python3",
-                              version=version)
+                              version=py_version)
 
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
 Sys.setenv(RETICULATE_PYTHON = path) #Set Python interpreter to that installed in myenv
