@@ -669,20 +669,20 @@ bGEV.NN.build=function(X.nn.q,X.lin.q,X.add.basis.q,
   #Combine towers
   
   #Location
-  if(!is.null(X.nn.q) & !is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq),name="Combine_q_components")  #Add all towers
-  if(is.null(X.nn.q) & !is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq),name="Combine_q_components")  #Add GAM+lin towers
-  if(!is.null(X.nn.q) & is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq),name="Combine_q_components")  #Add nn+lin towers
-  if(!is.null(X.nn.q) & !is.null(X.add.basis.q) & is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq),name="Combine_q_components")  #Add nn+GAM towers
+  if(!is.null(X.nn.q) & !is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
+  if(is.null(X.nn.q) & !is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
+  if(!is.null(X.nn.q) & is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add nn+lin towers
+  if(!is.null(X.nn.q) & !is.null(X.add.basis.q) & is.null(X.lin.q) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add nn+GAM towers
   if(is.null(X.nn.q) & is.null(X.add.basis.q) & !is.null(X.lin.q) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X.nn.q) & !is.null(X.add.basis.q) & is.null(X.lin.q) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X.nn.q) & is.null(X.add.basis.q) & is.null(X.lin.q) )  qBranchjoined <- nnBranchq  #Just nn tower
   if(is.null(X.nn.q) & is.null(X.add.basis.q) & is.null(X.lin.q) )  qBranchjoined <- statBranchq  #Just stationary tower
   
   #Spread
-  if(!is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs),name="Combine_s_components")  #Add all towers
-  if(is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs),name="Combine_s_components")  #Add GAM+lin towers
-  if(!is.null(X.nn.s) & is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs),name="Combine_s_components")  #Add nn+lin towers
-  if(!is.null(X.nn.s) & !is.null(X.add.basis.s) & is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs),name="Combine_s_components")  #Add nn+GAM towers
+  if(!is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs,nnBranchs))  #Add all towers
+  if(is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  linBranchs))  #Add GAM+lin towers
+  if(!is.null(X.nn.s) & is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(  linBranchs,nnBranchs))  #Add nn+lin towers
+  if(!is.null(X.nn.s) & !is.null(X.add.basis.s) & is.null(X.lin.s) )  sBranchjoined <- layer_add(inputs=c(addBranchs,  nnBranchs))  #Add nn+GAM towers
   if(is.null(X.nn.s) & is.null(X.add.basis.s) & !is.null(X.lin.s) )  sBranchjoined <- linBranchs  #Just lin tower
   if(is.null(X.nn.s) & !is.null(X.add.basis.s) & is.null(X.lin.s) )  sBranchjoined <- addBranchs  #Just GAM tower
   if(!is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )  sBranchjoined <- nnBranchs  #Just nn tower

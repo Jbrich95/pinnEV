@@ -1,7 +1,7 @@
 Package: pinnEV
 Type: Package
 Title: Partially-Interpretable Neural Networks for Extreme Value modelling
-Version: 0.1.2
+Version: 0.1.3
 Author: Jordan Richards
 Maintainer: The package maintainer <jordan.richards@kaust.edu.sa>
 Description: Methodology for fitting marginal extreme value (and associated) models using partially-interpretable neural networks. Networks are trained using the R interface to Keras with custom loss functions taken to be penalised versions of the negative log-likelihood for associated models.

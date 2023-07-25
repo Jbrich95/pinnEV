@@ -1,0 +1,62 @@
+#' The extended GPD distribution
+#'
+#'Distribution function, quantile function and random generation for the extended generalised Pareto distribution (eGPD) with scale \code{sigma > 0} and shapes \code{kappa > 0} and \code{xi > 0}.
+#' Note that unlike similar functions in package \code{stats}, these functions accept only scalar inputs, rather than vectors, for the parameters.
+
+#'@param y scalar quantile.
+#'@param prob scalar probability.
+#'@param sigma scalar scale parameter.
+#'@param kappa scalar location parameter.
+#'@param xi  scalar shape parameter.
+#'@param log logical; if \code{TRUE}, probabilities are given as \code{log(prob)}.
+#'@param n number of replications.
+#'
+#'@name eGPD
+#'
+#'
+#' @details{
+#'Originally proposed by Papastathopoulos and Tawn (2013), the first family of the eGPD (as named by Naveau et al., 2016) has distribution function 
+#'\deqn{G(y|\sigma,\kappa, \xi)=[\{1+\xi(y-\mu)/\sigma\}_+^{-1/\xi}]^{\kappa}} for scale \eqn{\sigma>0} and shapes \eqn{\kappa > 0} and \eqn{\xi > 0}. 
+#'
+#'}
+#' @return{
+#' \code{peGPD} gives the distribution function; \code{qeGPD} gives the quantile function; \code{reGPD} generates random deviates.
+#' }
+#'
+#'
+#'@references
+#'Papastathopoulos, I. and Tawn, J. A. (2013), \emph{xtended generalised Pareto models for tail estimation}, Journal of Statistical Planning and Inference, 43(1):131–1439.
+#'(\href{https://doi.org/10.1016/j.jspi.2012.07.001}{doi})
+#'
+#' Naveau, P., Huser, R., Ribereau, P., and Hannart, A. (2016), \emph{Modeling jointly low, moderate, and heavy rainfall intensities without a threshold selection}, Water Resources Research, 2(4):2753–2769.
+#' (\href{https://doi.org/10.1002/2015WR018552}{doi})
+#'
+
+
+#'
+#' @rdname eGPD
+#' @export
+#'
+peGPD=function(y,sigma,kappa,xi,log=F){
+  
+  
+  if(log) return(log((1-(1+xi*y/sigma)^(-1/xi))^kappa)) else return(((1-(1+xi*y/sigma)^(-1/xi))^kappa))
+}
+
+
+#' @rdname eGPD
+#' @export
+#'
+qeGPD=function(prob,sigma,kappa,xi){
+  
+  return(sigma/xi*((1-prob^{1/kappa})^(-xi)-1))
+  }
+
+#' @rdname eGPD
+#' @export
+#'
+reGPD=function(n,sigma,kappa,xi){
+  out <- qeGPD(runif(n),sigma,kappa,xi)
+  return(out)
+  
+}

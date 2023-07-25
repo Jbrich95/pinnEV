@@ -8,7 +8,7 @@
 A list with 6 elements:
 \describe{
 \item{BA}{An array with dimension (120, 200, 80), corresponding to the burnt area response data.}
-\item{lambda}{An array with dimension (120, 200, 80), corresponding to the burnt area response data.}
+\item{lambda}{An array with dimension (120, 200, 80), corresponding to the area of the spatial gridcell. Note that this is a dynamic variable.}
 \item{X}{A list with 4 elements:
 \describe{
 \item{X.met}{An array with dimension (120, 200, 80, 13) corresponding to the meterological predictors described below.}

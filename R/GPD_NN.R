@@ -499,10 +499,10 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   
  
   #Scale
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma,nnBranchsigma),name="Combine_sigma_components")  #Add all towers
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma),name="Combine_sigma_components")  #Add GAM+lin towers
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(  linBranchsigma,nnBranchsigma),name="Combine_sigma_components")  #Add nn+lin towers
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  nnBranchsigma),name="Combine_sigma_components")  #Add nn+GAM towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma,nnBranchsigma))  #Add all towers
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma))  #Add GAM+lin towers
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(  linBranchsigma,nnBranchsigma))  #Add nn+lin towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  nnBranchsigma))  #Add nn+GAM towers
   if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- linBranchsigma  #Just lin tower
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- addBranchsigma  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- nnBranchsigma  #Just nn tower

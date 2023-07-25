@@ -41,7 +41,7 @@
 #' @format A list with 6 elements:
 #' \describe{
 #' \item{BA}{An array with dimension (120, 200, 80), corresponding to the burnt area response data.}
-#'  \item{lambda}{An array with dimension (120, 200, 80), corresponding to the burnt area response data.}
+#'  \item{lambda}{An array with dimension (120, 200, 80), corresponding to the area of the spatial gridcell. Note that this is a dynamic variable.}
 
 #' \item{X}{A list with 4 elements:
 #' \describe{
@@ -70,7 +70,7 @@
 #'
 #'Otón, G., Pereira, J. M. C., Silva, J. M. N., and Chuvieco, E. (2021). \emph{Analysis of trends in the FireCCI global long term burned area product (1982–2018).} Fire, 4(4). (\href{https://doi.org/10.3390/fire4040074}{doi})
 #'
-#' Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
+#'Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
 #'
 #' @examples
 #' data(MedWild)

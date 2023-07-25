@@ -413,10 +413,10 @@ quant.NN.build=function(X.nn,X.lin,X.add.basis, offset, type, init.q, widths,fil
 
 
 
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq),name="Combine_q_components")  #Add all towers
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq),name="Combine_q_components")  #Add GAM+lin towers
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq),name="Combine_q_components")  #Add NN+lin towers
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq),name="Combine_q_components")  #Add NN+GAM towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq,nnBranchq))  #Add all towers
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  linBranchq))  #Add GAM+lin towers
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(  linBranchq,nnBranchq))  #Add NN+lin towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  qBranchjoined <- layer_add(inputs=c(addBranchq,  nnBranchq))  #Add NN+GAM towers
   if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  qBranchjoined <- linBranchq  #Just lin tower
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  qBranchjoined <- addBranchq  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  qBranchjoined <- nnBranchq  #Just NN tower
