@@ -33,7 +33,7 @@ reticulate::virtualenv_create(envname = 'myenv',
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
 Sys.setenv(RETICULATE_PYTHON = path) #Set Python interpreter to that installed in myenv
 
-tf_version="2.10.0" #Replace with "2.10.0-gpu" for GPU version.
+tf_version="2.10.0" 
 reticulate::use_virtualenv("myenv", required = T)
 tensorflow::install_tensorflow(method="virtualenv", envname="myenv",
                                  version=tf_version) #Install version of tensorflow in virtual environment
