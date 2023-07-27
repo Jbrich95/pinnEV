@@ -18,26 +18,21 @@ Note that the bGEV and bGEV-PP models are less computationally efficient than th
 ## Installation 
 
 ```r
-library(devtools)
-install_github("https://github.com/Jbrich95/pinnEV")
-
-#Do not use library(reticulate) as this auto-initialises a Python environment. Instead call functions directly
-
-#Create a virtual envionment 'myenv' with Python3.8.10. Install tensorflow, keras, tfprobability and spektral within this environment.
-
 py_version <- "3.8.10"
+path_to_python <- reticulate::install_python(version=py_version)
+
 #Create a virtual envionment 'myenv' with Python 3.8.10. Install tensorflow  within this environment.
 reticulate::virtualenv_create(envname = 'myenv',
-                              python="/usr/local/bin/python3",
+                              python=path_to_python,
                               version=py_version)
 
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
 Sys.setenv(RETICULATE_PYTHON = path) #Set Python interpreter to that installed in myenv
 
-tf_version="2.10.0" 
+tf_version="2.13.0" 
 reticulate::use_virtualenv("myenv", required = T)
 tensorflow::install_tensorflow(method="virtualenv", envname="myenv",
-                                 version=tf_version) #Install version of tensorflow in virtual environment
+                               version=tf_version) #Install version of tensorflow in virtual environment
 keras::install_keras(method = c("virtualenv"), envname = "myenv") #Install keras
 
 keras::is_keras_available() #Check if keras is available
@@ -50,6 +45,7 @@ tfprobability::install_tfprobability(method = c("virtualenv"), envname = "myenv"
 #Install spektral - this is for the graph NNs
 reticulate::virtualenv_install("myenv",
                                packages = "spektral", version="1.3.0")
+
 ```
 
 ## Coming in future updates 
