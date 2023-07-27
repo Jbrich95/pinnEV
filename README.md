@@ -33,7 +33,7 @@ tf_version="2.13.0"
 reticulate::use_virtualenv("myenv", required = T)
 tensorflow::install_tensorflow(method="virtualenv", envname="myenv",
                                version=tf_version) #Install version of tensorflow in virtual environment
-keras::install_keras(method = c("virtualenv"), envname = "myenv") #Install keras
+keras::install_keras(method = c("virtualenv"), envname = "myenv",version=tf_version) #Install keras
 
 keras::is_keras_available() #Check if keras is available
 
