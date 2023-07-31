@@ -340,7 +340,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, u = NULL, type="MLP",l
   if(is.null(X.nn.q) & is.null(X.add.basis.q) & is.null(X.lin.q) )   {train.data= list(); print("Defining stationary model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   
   S_lambda.q=S_lambda$S_lambda.q
-  if(is.null(S_lambda.q)){print("No smoothing penalty used for q_\alpha")}
+  if(!is.null(X.add.basis.q) & is.null(S_lambda.q)){print("No smoothing penalty used for q_\alpha")}
   if(is.null(X.add.basis.q)){S_lambda.q=NULL}
   
   X.nn.s=X.s$X.nn.s
@@ -357,7 +357,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, u = NULL, type="MLP",l
   if(is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data=  c(train.data,list(u)); print("Defining stationary model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(u_input=u)),Y.valid)}
 
   S_lambda.s=S_lambda$S_lambda.s
-  if(is.null(S_lambda.s)){print("No smoothing penalty used for s_\beta")}
+  if(!is.null(X.add.basis.s) &is.null(S_lambda.s)){print("No smoothing penalty used for s_\beta")}
   if(is.null(X.add.basis.s)){S_lambda.s=NULL}
 
   S_lambda =list("S_lambda.q"=S_lambda.q, "S_lambda.s"=S_lambda.s)

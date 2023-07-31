@@ -4,12 +4,12 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
+#'  the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
-#' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+#' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations. If \code{type=="GCNN"}, then \code{Y.train} and \code{Y.valid} must have two dimensions with the latter corresponding to \eqn{M} spatial locations.
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
 #' @param X.s  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{sigma}. Must contain at least one of the following three named entries:\describe{
@@ -30,12 +30,13 @@
 #' @param init.wb_path filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial scale, kappa and shape estimates are \code{init.scale, init.kappa} and \code{init.xi}, respectively,  across all dimensions.
-#' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
+#' @param widths vector of widths/filters for hidden layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
 #' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
 #' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.s} and \code{X.add.basis.k} on their respective parameters; each element only used if \code{!is.null(X.add.basis.s)} and \code{!is.null(X.add.basis.k)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{\sigma}; similarly for the second element and \eqn{\kappa}. 
-
+#' @param A \eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied, defaults to \code{NULL}.
+#'
 #'@name eGPD.NN
 
 #' @details{
@@ -308,12 +309,12 @@
 #' @rdname eGPD.NN
 #' @export
 
-eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL,
+eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, A=NULL,
                        n.ep=100, batch.size=100,init.scale=NULL, init.kappa=NULL,init.xi=NULL,
                        widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL, S_lambda=NULL)
 {
   
-  
+
   
   
   if(is.null(X.k) &  is.null(X.s)  ) stop("No predictors provided for sigma or kappa: Stationary models are not permitted ")
@@ -325,6 +326,9 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL,
   if(is.null(init.scale) & is.null(init.wb_path)   ) stop("Inital scale estimate not provided")
   if(is.null(init.xi)  & is.null(init.wb_path) ) stop("Inital xi estimate not provided")
   if(any(c(init.scale,init.kappa,init.xi) < 0) ) stop("Negative parameters are not feasible")
+  
+  if(is.null(A) & type=="GCNN")stop("Adjacency matrix must be supplied if GCNN required")
+  if(!is.null(A)) if(type=="GCNN" & (length(dim(Y.train))!=2 | dim(A)[1]!=dim(A)[2] | dim(A)[1]!=dim(Y.train)[2]))stop("Dimensions of the adjacency matrix are incorrect")
   
   
   print(paste0("Creating eGPD model"))
@@ -353,7 +357,7 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL,
   if(is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= list(); print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   }
   S_lambda.s=S_lambda$S_lambda.s
-  if(is.null(S_lambda.s)){print("No smoothing penalty used for sigma")}
+  if(!is.null(X.add.basis.s) & is.null(S_lambda.s)){print("No smoothing penalty used for sigma")}
   if(is.null(X.add.basis.s)){S_lambda.s=NULL}
   
   X.nn.k=X.k$X.nn.k
@@ -370,13 +374,14 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL,
   if(is.null(X.nn.k) & is.null(X.add.basis.k) & is.null(X.lin.k) )   {train.data= train.data; print("Defining stationary model for kappa" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
   S_lambda.k=S_lambda$S_lambda.k
-  if(is.null(S_lambda.k)){print("No smoothing penalty used for kappa")}
+  if(!is.null(X.add.basis.k) & is.null(S_lambda.k)){print("No smoothing penalty used for kappa")}
   if(is.null(X.add.basis.k)){S_lambda.k=NULL}
   
   S_lambda =list("S_lambda.k"=S_lambda.k, "S_lambda.s"=S_lambda.s)
   
   if(type=="CNN" & (!is.null(X.nn.k) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
+  if(type=="GCNN"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
   
   reticulate::use_virtualenv("myenv", required = T)
   
@@ -386,7 +391,7 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL,
   
   model<-eGPD.NN.build(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset,type,init.scale,init.kappa,init.xi, widths,filter.dim)
+                       offset,type,init.scale,init.kappa,init.xi, widths,filter.dim, A)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
@@ -501,8 +506,49 @@ eGPD.NN.predict=function(X.s,X.k, model, offset=NULL)
 #'
 eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset, type, init.scale,init.kappa,init.xi, widths,filter.dim)
+                       offset, type, init.scale,init.kappa,init.xi, widths,filter.dim, A)
 {
+  
+  if(type=="GCNN"){
+  spk <<- reticulate::import("spektral", delay_load = list(
+    priority = 10,
+    environment = "myenv"
+  ))
+  
+  
+  layer_graph_conv <- function(object,
+                               channels,
+                               activation = NULL,
+                               use_bias = TRUE,
+                               kernel_initializer = 'glorot_uniform',
+                               bias_initializer = 'zeros',
+                               kernel_regularizer = NULL,
+                               bias_regularizer = NULL,
+                               activity_regularizer = NULL,
+                               kernel_constraint = NULL,
+                               bias_constraint = NULL,
+                               name=NULL,
+                               ...)
+  {
+    args <- list(channels = as.integer(channels),
+                 activation = activation,
+                 use_bias = use_bias,
+                 kernel_initializer = kernel_initializer,
+                 bias_initializer = bias_initializer,
+                 kernel_regularizer = kernel_regularizer,
+                 bias_regularizer = bias_regularizer,
+                 activity_regularizer = activity_regularizer,
+                 kernel_constraint = kernel_constraint,
+                 bias_constraint = bias_constraint,
+                 name=name
+    )
+    keras::create_layer(spk$layers$GCNConv, object, args)
+  }
+  
+  
+    ML<-spk$utils$convolution$gcn_filter(A,symmetric=T)
+  }
+  
   
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
   #Additive inputs
@@ -576,8 +622,13 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
                                                   input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_cnn',i) )
       }
       
+    }else if(type=="GCNN"){
+      for(i in 1:n.layers){
+        nnBranchk <- list(nnBranchk,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
+                                                  input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_gcnn',i) )
+      }
+      
     }
-    
     nnBranchk <-   nnBranchk  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_k_dense_final',
                                                 weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.kappa)))
     
@@ -598,6 +649,13 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
       for(i in 1:n.layers){
         nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
                                                   input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_cnn',i) )
+      }
+      
+    }else if(type=="GCNN"){
+
+      for(i in 1:n.layers){
+        nnBranchs <- list(nnBranchs,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
+                                                  input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_gcnn',i) )
       }
       
     }

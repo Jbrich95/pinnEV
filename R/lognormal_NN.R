@@ -323,7 +323,7 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.
   if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(); print("Defining stationary model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   
   S_lambda.mu=S_lambda$S_lambda.mu
-  if(is.null(S_lambda.mu)){print("No smoothing penalty used for mu")}
+  if(!is.null(X.add.basis.mu) & is.null(S_lambda.mu)){print("No smoothing penalty used for mu")}
   if(is.null(X.add.basis.mu)){S_lambda.mu=NULL}
   
   X.nn.sig=X.sig$X.nn.sig
@@ -340,7 +340,7 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.
   if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= train.data; print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
   S_lambda.sig=S_lambda$S_lambda.sig
-  if(is.null(S_lambda.sig)){print("No smoothing penalty used for sigma")}
+  if(!is.null(X.add.basis.sig) &is.null(S_lambda.sig)){print("No smoothing penalty used for sigma")}
   if(is.null(X.add.basis.sig)){S_lambda.sig=NULL}
   
   S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)

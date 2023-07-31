@@ -29,7 +29,7 @@ reticulate::virtualenv_create(envname = 'myenv',
 path<- paste0(reticulate::virtualenv_root(),"/myenv/bin/python")
 Sys.setenv(RETICULATE_PYTHON = path) #Set Python interpreter to that installed in myenv
 
-tf_version="2.13.0" 
+tf_version="2.11.0" 
 reticulate::use_virtualenv("myenv", required = T)
 tensorflow::install_tensorflow(method="virtualenv", envname="myenv",
                                version=tf_version) #Install version of tensorflow in virtual environment
@@ -39,12 +39,13 @@ keras::is_keras_available() #Check if keras is available
 
 #Install tfprobability
 reticulate::virtualenv_install("myenv",
-                               packages = "tensorflow_probability", version="0.14.0")
+                               packages = "tensorflow_probability==0.14.0",  ignore_installed = T)
 tfprobability::install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14.0")
 
 #Install spektral - this is for the graph NNs
 reticulate::virtualenv_install("myenv",
                                packages = "spektral", version="1.3.0")
+
 
 ```
 

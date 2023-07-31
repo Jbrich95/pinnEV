@@ -7,9 +7,9 @@
 \title{eGPD PINN}
 \usage{
 eGPD.NN.train(Y.train, Y.valid = NULL, X.s, X.k, type = "MLP",
-  offset = NULL, n.ep = 100, batch.size = 100, init.scale = NULL,
-  init.kappa = NULL, init.xi = NULL, widths = c(6, 3),
-  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
+  offset = NULL, A = NULL, n.ep = 100, batch.size = 100,
+  init.scale = NULL, init.kappa = NULL, init.xi = NULL, widths = c(6,
+  3), filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
   S_lambda = NULL)
 
 eGPD.NN.predict(X.s, X.k, model, offset = NULL)
@@ -19,7 +19,7 @@ eGPD.NN.predict(X.s, X.k, model, offset = NULL)
 Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations. If \code{type=="GCNN"}, then \code{Y.train} and \code{Y.valid} must have two dimensions with the latter corresponding to \eqn{M} spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
 \item{X.s}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the scale parameter \eqn{sigma}. Must contain at least one of the following three named entries:\describe{
@@ -36,9 +36,11 @@ Note that \code{X.s} and \code{X.k} are the predictors for both \code{Y.train} a
 \item{X.k}{similarly to \code{X.s}, but for modelling the shape parameter \eqn{\kappa>0}. Note that we require at least one of \code{!is.null(X.s)} or \code{!is.null(X.k)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
+the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).}
 
 \item{offset}{an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.}
+
+\item{A}{\eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied, defaults to \code{NULL}.}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
@@ -46,7 +48,7 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 
 \item{init.scale, init.kappa, init.xi}{sets the initial \eqn{\sigma,\kappa} and \eqn{\xi} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.}
 
-\item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
+\item{widths}{vector of widths/filters for hidden layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
 \item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.}
 
