@@ -545,7 +545,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
     keras::create_layer(spk$layers$GCNConv, object, args)
   }
   
-  
+  print("Creating modified Laplacian)")
     ML<-spk$utils$convolution$gcn_filter(A,symmetric=T)
   }
   

@@ -8,6 +8,6 @@ Description: Methodology for fitting marginal extreme value (and associated) mod
 License: GPL
 Encoding: UTF-8
 Depends: R (>= 3.4)
-Imports: reticulate, keras, tfprobability, stats, evd
+Imports: reticulate, keras, stats, evd, fields
 RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE, old_usage = TRUE)

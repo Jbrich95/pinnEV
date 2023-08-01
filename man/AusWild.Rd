@@ -49,7 +49,7 @@ and both eastern (U) and northern (V) components of wind velocity at a 10m altit
 
 Average NDVI (unitless) is provided in \code{X.NDVI} and taken from the Tier-1 orthorectified Landsat-7 scenes converted to the top of atmosphere reflectance (Chander et al., 2009).
 
-Two topographical predictors are given in \code{X.topo}: the average slope (◦) and aspect (◦)of each polygon, which were derived from the
+Two topographical predictors are given in \code{X.topo}: the average slope (◦) and aspect (◦) of each polygon, which were derived from the
 Shuttle Radar Topography Mission digital elevation model (Farr et al., 2000). Note that whilst these variables are static,
 we have stacked them into an array to have the same dimension as \code{X.met} and \code{X.NDVI}.
 

@@ -37,10 +37,6 @@ keras::install_keras(method = c("virtualenv"), envname = "myenv",version=tf_vers
 
 keras::is_keras_available() #Check if keras is available
 
-#Install tfprobability
-reticulate::virtualenv_install("myenv",
-                               packages = "tensorflow_probability==0.14.0",  ignore_installed = T)
-tfprobability::install_tfprobability(method = c("virtualenv"), envname = "myenv", version="0.14.0")
 
 #Install spektral - this is for the graph NNs
 reticulate::virtualenv_install("myenv",

@@ -728,9 +728,12 @@ logH=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds){
 
   #Weight
 
-
-  beta_dist=tfd_beta(concentration1 = c1,concentration0 = c2)
-  p= beta_dist %>% tfd_cdf((y-a)/(b-a)*obsInds)
+  temp=(y-a)/(b-a)*obsInds #Need to set values <0 and >1 to 0 and 1, otherwise function breaks
+  temp=K$relu(temp)
+  temp=1-temp
+  temp=K$relu(temp)
+  temp=1-temp
+  p =tf$math$betainc(c1,c2,temp)
 
   #Lower tail
   q_a_tilde=a-(b-a)*(l0(alpha)-l0(p_a))/(l0(p_a)-l0(p_b))
@@ -758,14 +761,13 @@ lambda=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds){
 
   #Weight
 
-  beta_dist=tfd_beta(concentration1 = c1,concentration0 = c2)
-  p= beta_dist %>% tfd_cdf(((y-a)/(b-a))*exceedInds)
-
-  temp=(y-a)/(b-a) #Need to set values <0 and >1 to 0 and 1, otherwise function breaks
+  temp=(y-a)/(b-a)*obsInds #Need to set values <0 and >1 to 0 and 1, otherwise function breaks
   temp=K$relu(temp)
   temp=1-temp
   temp=K$relu(temp)
   temp=1-temp
+  p =tf$math$betainc(c1,c2,temp)
+  
   pprime = temp^(c1-1)*(1-temp)^(c2-1)/beta(c1,c2)
   pprime=pprime/(b-a)*exceedInds
 
