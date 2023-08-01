@@ -138,6 +138,7 @@ theta[,,,1]=sigma; theta[,,,2]  =xi; theta[,,,3]  =u
 #If u were the true 80\% quantile, say,  of the response, then only 20\% of the data should exceed u. 
 #We achieve this by simulating a Bernoulli variable to determine if Y exceeds u
 
+require(evd)
 Y=apply(theta,1:3,function(x){ 
   if(rbinom(1,1,0.8)==1) rgpd(n=1,loc=x[3],scale=x[1],shape=x[2]) else  runif(1,0,x[3])
 }

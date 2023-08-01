@@ -59,12 +59,13 @@ the graph convolutional neural network (GCNN) of Kipf and Welling (2016).
 \examples{
 data("AusWild")
 
+
 #Create adjacency matrix
 require(fields)
 h <- rdist.earth(AusWild$coords,miles=F) #Distance matrix
 
 range.par <- 300
-A <- exp(-h^2/range.par)  #or alternatively, exp(-h/range.par)
+A <- exp(-h^2/range.par)  # or alternatively, exp(-h/range.par)
 
 cut.off.dist <- 100
 
@@ -115,12 +116,21 @@ X.s=list("X.nn.s"=X,
          "X.lin.s"=NULL, "X.add.basis.s"=NULL)
 
 
-#Fit the eGPD model.
+#Fit the eGPD model. 
 NN.fit<-eGPD.NN.train(Y.train, Y.valid,X.s,X.k=NULL, #X.k=NULL corresponds to a stationary kappa parameters
                       type="GCNN", A=A, offset=offset,
-                      n.ep=3500, batch.size=235,
+                      n.ep=3500, batch.size=235, 
                       init.scale=init.scale, init.kappa=init.kappa,init.xi=init.xi,
                       widths=widths, seed=1)
+
+
+preds<-eGPD.NN.predict(X.s=X.s,X.k=NULL,NN.fit$model, offset)
+
+print("Plot scale parameter estimates")
+hist(preds$pred.sigma, xlab=expression(sigma),main="")
+
+print(paste0("kappa = ", round(preds$pred.kappa[1,1],3)))
+print(paste0("xi = ", round(preds$pred.xi[1,1],3)))
 }
 \references{
 Farr, T. G. and Kobrick, M. (2000). \emph{Shuttle radar topography mission produces a wealth of data.} Eos, Transactions American Geophysical Union, 81(48):583–585. (\href{https://doi.org/10.1029/EO081i048p00583}{doi}).

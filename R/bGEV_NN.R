@@ -286,7 +286,7 @@
 #'
 #' }
 #'
-#' @import reticulate tfprobability keras tensorflow 
+#' @import reticulate keras tensorflow 
 #' @rdname bGEV.NN
 #' @export
 
@@ -764,6 +764,7 @@ logH=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds){
   
   return((p*(-t1)*(1-zeroz1_inds)+(1-p)*(-t2))*obsInds)
 }
+
 lambda=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds){
   K <- backend()
   #Upper tail
@@ -825,7 +826,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      y <- y_true[all_dims(),1]
+      y <- y_true
       
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
@@ -859,7 +860,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      y <- y_true[all_dims(),1]
+      y <- y_true
       
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
@@ -905,7 +906,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      y <- y_true[all_dims(),1]
+      y <- y_true
       
       t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
       gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
@@ -947,7 +948,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       s_b=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      y <- y_true[all_dims(),1]
+      y <- y_true
       
       t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
       gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])

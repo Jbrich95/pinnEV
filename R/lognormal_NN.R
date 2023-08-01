@@ -673,7 +673,7 @@ lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
   input=c(input)
   
   
-  output <- layer_concatenate(c(locBranchjoined,sBranchjoined),name="Combine_parameter_tensors")
+  output <- layer_concatenate(c(locBranchjoined,sBranchjoined))
   
   model <- keras_model(  inputs = input,   outputs = output,name=paste0("log-normal"))
   print(model)
@@ -697,8 +697,8 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
-      y <- y_true[all_dims(),1]
-      y=K$relu(y-u)
+      y <- y_true
+  
       # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
       # arbitrarily large (<1e10) value to y and then taking the sign ReLu
       obsInds=K$sign(K$relu(y+9e9))
@@ -729,9 +729,8 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
-      y <- y_true[all_dims(),1]
-      y=K$relu(y-u)
-            
+      y <- y_true
+
       t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
       gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
       S_lambda.mu.tensor=K$constant(S_lambda.mu)
@@ -773,9 +772,8 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
       
-      y <- y_true[all_dims(),1]
-      y=K$relu(y-u)
-           
+      y <- y_true
+
       t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
       gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
       S_lambda.sig.tensor=K$constant(S_lambda.sig)
@@ -815,9 +813,8 @@ lognormal_loss <-function(S_lambda=NULL){
       mu=y_pred[all_dims(),1]
       sig=y_pred[all_dims(),2]
 
-      y <- y_true[all_dims(),1]
-      y=K$relu(y-u)
-      
+      y <- y_true
+
       t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
       gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
       S_lambda.mu.tensor=K$constant(S_lambda.mu)

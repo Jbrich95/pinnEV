@@ -305,7 +305,7 @@
 #' }
 
 
-#' @import reticulate tfprobability keras tensorflow 
+#' @import reticulate keras tensorflow 
 #' @rdname eGPD.NN
 #' @export
 
@@ -320,6 +320,7 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, 
   if(is.null(X.k) &  is.null(X.s)  ) stop("No predictors provided for sigma or kappa: Stationary models are not permitted ")
   if(is.null(Y.train)) stop("No training response data provided")
   
+  if(is.null(X.s)) offset=NULL
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
   
   if(is.null(init.kappa) & is.null(init.wb_path)  ) stop("Inital kappa estimate not provided")
@@ -346,7 +347,8 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, 
     if(is.null(X.nn.s) & is.null(X.add.basis.s) & !is.null(X.lin.s) )   {train.data= list(X.lin.s,offset); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_s=X.lin.s,offset_input=offset),Y.valid)}
     if(is.null(X.nn.s) & !is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= list(X.add.basis.s,offset); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_s=X.add.basis.s,offset_input=offset),Y.valid)}
     if(!is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= list(X.nn.s,offset); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_s=X.nn.s,offset_input=offset),Y.valid)} 
-  }else if(is.null(offset)){
+  
+    }else if(is.null(offset)){
   if(!is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) ) {  train.data= list(X.lin.s,X.add.basis.s,X.nn.s); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_s=X.lin.s,add_input_s=X.add.basis.s,  nn_input_s=X.nn.s),Y.valid)}
   if(is.null(X.nn.s) & !is.null(X.add.basis.s) & !is.null(X.lin.s) ) {   train.data= list(X.lin.s,X.add.basis.s); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_s=X.lin.s,add_input_s=X.add.basis.s),Y.valid)}
   if(!is.null(X.nn.s) & is.null(X.add.basis.s) & !is.null(X.lin.s) ) { train.data= list(X.lin.s,X.nn.s); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_s=X.lin.s, nn_input_s=X.nn.s),Y.valid)}
@@ -440,9 +442,9 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, 
 #'
 eGPD.NN.predict=function(X.s,X.k, model, offset=NULL)
 {
-  library(tensorflow)
   if(is.null(X.k) &  is.null(X.s)  ) stop("No predictors provided for sigma or kappa: Stationary models are not permitted ")
-  
+  if(is.null(X.s)) offset=NULL
+
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
   
   X.nn.k=X.k$X.nn.k
@@ -545,7 +547,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
     keras::create_layer(spk$layers$GCNConv, object, args)
   }
   
-  print("Creating modified Laplacian)")
+  print("Creating modified Laplacian")
     ML<-spk$utils$convolution$gcn_filter(A,symmetric=T)
   }
   
@@ -627,7 +629,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
         nnBranchk <- list(nnBranchk,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
                                                   input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_gcnn',i) )
       }
-      
+    
     }
     nnBranchk <-   nnBranchk  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_k_dense_final',
                                                 weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.kappa)))

@@ -369,10 +369,10 @@ logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.d
 
 
 
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp),name="Combine_p_components")  #Add all towers
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp),name="Combine_p_components")  #Add GAM+lin towers
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp),name="Combine_p_components")  #Add NN+lin towers
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp),name="Combine_p_components")  #Add NN+GAM towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp,nnBranchp))  #Add all towers
+  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  linBranchp))  #Add GAM+lin towers
+  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(  linBranchp,nnBranchp))  #Add NN+lin towers
+  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- layer_add(inputs=c(addBranchp,  nnBranchp))  #Add NN+GAM towers
   if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  pBranchjoined <- linBranchp  #Just lin tower
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- addBranchp  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  pBranchjoined <- nnBranchp  #Just NN tower

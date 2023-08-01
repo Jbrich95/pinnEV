@@ -119,6 +119,7 @@
 #' #If u were the true 80% quantile, say,  of the response, then only 20% of the data should exceed u. 
 #' #We achieve this by simulating a Bernoulli variable to determine if Y exceeds u
 #' 
+#' require(evd)
 #' Y=apply(theta,1:3,function(x){ 
 #'   if(rbinom(1,1,0.8)==1) rgpd(n=1,loc=x[3],scale=x[1],shape=x[2]) else  runif(1,0,x[3])
 #' }
@@ -222,51 +223,51 @@
 #' @export
 
 
-  GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NULL,re.par=F,
-                          n.ep=100, batch.size=100,init.scale=NULL,init.xi=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
-  {
-    
+GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NULL,re.par=F,
+                      n.ep=100, batch.size=100,init.scale=NULL,init.xi=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
+{
+  
   
   
   
   if(is.null(X)  ) stop("No predictors provided for sigma")
   if(is.null(Y.train)) stop("No training response data provided")
   if(is.null(u)) stop("No threshold u provided")
-    
-    if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
-    
-
+  
+  if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
+  
+  
   if(is.null(init.scale) & is.null(init.wb_path)   ) stop("Inital scale estimate not provided")
   if(is.null(init.xi)  & is.null(init.wb_path) ) stop("Inital shape estimate not provided")
   
   
   print(paste0("Creating GPD model"))
   if(re.par==T)  print(paste0("Creating re-parameterised GPD model"))
- if(!is.null(offset)) print(paste0("Using offset scale parameter"))
-
+  if(!is.null(offset)) print(paste0("Using offset scale parameter"))
+  
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
   
   if(!is.null(offset)){
-  if(re.par==F){
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
-  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
-  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-  }
-  if(re.par==T){
-    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
-    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
-    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
-    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
-  }
+    if(re.par==F){
+      if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+    }
+    if(re.par==T){
+      if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u,offset); print("Defining lin+GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {   train.data= list(X.lin,X.add.basis,u,offset); print("Defining lin+GAM model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) ) { train.data= list(X.lin,X.nn,u,offset); print("Defining lin+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin, nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) {train.data= list(X.add.basis,X.nn,u,offset); print("Defining GAM+NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   {train.data= list(X.lin,u,offset); print("Defining fully-linear model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,u_input=u,offset_input=offset),Y.valid)}
+      if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u,offset); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u,offset_input=offset),Y.valid)}
+      if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u,offset); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u,offset_input=offset),Y.valid)}
+    }
   }else if(is.null(offset)){
     if(re.par==F){
       if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) ) {  train.data= list(X.lin,X.add.basis,X.nn,u); print("Defining lin+GAM+NN model for sigma_u" );  if(!is.null(Y.valid)) validation.data=list(list(lin_input_sigma=X.lin,add_input_sigma=X.add.basis,  nn_input_sigma=X.nn,u_input=u),Y.valid)}
@@ -303,7 +304,7 @@
   if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
   
   model<-GPD.NN.build(X.nn,X.lin,X.add.basis,
-                         u,offset,type,init.scale,init.xi, widths,filter.dim)
+                      u,offset,type,init.scale,init.xi, widths,filter.dim)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
@@ -350,26 +351,26 @@
 #' @rdname GPD.NN
 #' @export
 #'
-  GPD.NN.predict=function(X,u, model,offset=NULL)
+GPD.NN.predict=function(X,u, model,offset=NULL)
 {
   library(tensorflow)
   if(is.null(X)  ) stop("No predictors provided for sigma")
-    print("Note that sigma is determined by the parameterisation. If model fitted with re.par == FALSE, sigma here is sigma_u")
+  print("Note that sigma is determined by the parameterisation. If model fitted with re.par == FALSE, sigma here is sigma_u")
   
-    if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
-
+  if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
+  
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
   
   if(!is.null(offset)){
-  if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u,offset)
-  if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u,offset)
-  if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  train.data= list(X.lin,X.nn,u,offset)
-  if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) train.data= list(X.add.basis,X.nn,u,offset)
-  if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,u,offset)
-  if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.add.basis,u,offset)
-  if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.nn,u,offset)
+    if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u,offset)
+    if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u,offset)
+    if(!is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )  train.data= list(X.lin,X.nn,u,offset)
+    if(!is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) ) train.data= list(X.add.basis,X.nn,u,offset)
+    if(is.null(X.nn) & is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,u,offset)
+    if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.add.basis,u,offset)
+    if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   train.data= list(X.nn,u,offset)
   }else{
     if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,X.nn,u)
     if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )   train.data= list(X.lin,X.add.basis,u)
@@ -381,7 +382,7 @@
     
     
   }
-
+  
   
   predictions<-model %>% predict( train.data)
   predictions <- k_constant(predictions)
@@ -389,7 +390,7 @@
   pred.xi=k_get_value(predictions[all_dims(),3])
   
   if(!is.null(X.add.basis))  gam.weights_sigma<-matrix(t(model$get_layer("add_sigma")$get_weights()[[1]]),nrow=dim(X.add.basis)[length(dim(X.add.basis))-1],ncol=dim(X.add.basis)[length(dim(X.add.basis))],byrow=T)
-
+  
   out=list("pred.sigma"=pred.sigma,"pred.xi"=pred.xi)
   if(!is.null(X.lin) ) out=c(out,list("lin.coeff_sigma"=c(model$get_layer("lin_sigma")$get_weights()[[1]])))
   if(!is.null(X.add.basis) ) out=c(out,list("gam.weights_sigma"=gam.weights_sigma))
@@ -400,13 +401,13 @@
 #'
 #'
 GPD.NN.build=function(X.nn,X.lin,X.add.basis,
-                         u,offset,
-                         type,init.scale,init.xi, widths,filter.dim)
+                      u,offset,
+                      type,init.scale,init.xi, widths,filter.dim)
 {
   
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
   
-
+  
   #Additive input
   if(!is.null(X.add.basis))  input_add_sigma<- layer_input(shape = dim(X.add.basis)[-1], name = 'add_input_sigma')
   
@@ -434,7 +435,7 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   
   init.scale=log(init.scale)
   #NN towers
- 
+  
   #Sigma
   if(!is.null(X.nn)){
     
@@ -445,18 +446,18 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
     if(type=="MLP"){
       for(i in 1:n.layers){
         nnBranchsigma <- nnBranchsigma  %>% layer_dense(units=nunits[i],activation = 'relu',
-                                                input_shape =dim(X.nn)[-1], name = paste0('nn_sigma_dense',i) )
+                                                        input_shape =dim(X.nn)[-1], name = paste0('nn_sigma_dense',i) )
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
         nnBranchsigma <- nnBranchsigma  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
-                                                  input_shape =dim(X.nn)[-1], name = paste0('nn_sigma_cnn',i) )
+                                                          input_shape =dim(X.nn)[-1], name = paste0('nn_sigma_cnn',i) )
       }
       
     }
     
     nnBranchsigma <-   nnBranchsigma  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_sigma_dense_final',
-                                                weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.scale)))
+                                                        weights=list(matrix(0,nrow=nunits[n.layers],ncol=1), array(init.scale)))
     
   }
   #Additive towers
@@ -497,7 +498,7 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
     }
   }
   
- 
+  
   #Scale
   if(!is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma,nnBranchsigma))  #Add all towers
   if(is.null(X.nn) & !is.null(X.add.basis) & !is.null(X.lin) )  sigmaBranchjoined <- layer_add(inputs=c(addBranchsigma,  linBranchsigma))  #Add GAM+lin towers
@@ -507,16 +508,16 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
   if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- addBranchsigma  #Just GAM tower
   if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )  sigmaBranchjoined <- nnBranchsigma  #Just nn tower
   
-
+  
   #Apply link functions 
   
   sigmaBranchjoined <- sigmaBranchjoined %>% layer_activation( activation = 'exponential', name = "sigma_activation")
   
   #Accommodate offset if available
-  if(!is.null(offset))    qBranchjoined <- layer_multiply(inputs=c(input_offset,sigmaBranchjoined))
+  if(!is.null(offset))    sigmaBranchjoined <- layer_multiply(inputs=c(input_offset,sigmaBranchjoined))
   
   input=c()
-
+  
   if(!is.null(X.lin) ) input=c(input,input_lin_sigma)
   if(!is.null(X.add.basis) ) input=c(input,input_add_sigma)
   if(!is.null(X.nn) ) input=c(input,input_nn_sigma)
@@ -544,7 +545,7 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
       scale=y_pred[all_dims(),2]
       xi=y_pred[all_dims(),3]
       
-      y <- y_true[all_dims(),1]
+      y <- y_true
       y=K$relu(y-u)
       
       if(re.par==T){
@@ -566,38 +567,38 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
   }else{
     loss<-function( y_true, y_pred) {
       
-    K <- backend()
-    
-    t.gam.weights=K$constant(t(model$get_layer("add_sigma")$get_weights()[[1]]))
-    gam.weights=K$constant(model$get_layer("add_sigma")$get_weights()[[1]])
-    S_lambda.tensor=K$constant(S_lambda)
-    
-    penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
-    
-    u=y_pred[all_dims(),1]
-    scale=y_pred[all_dims(),2]
-    xi=y_pred[all_dims(),3]
-    y <- y_true[all_dims(),1]
-    y=K$relu(y-u)
-    
-    if(re.par==T){
-      sigu=scale+xi*u
-    }else{
-      sigu=scale
+      K <- backend()
+      
+      t.gam.weights=K$constant(t(model$get_layer("add_sigma")$get_weights()[[1]]))
+      gam.weights=K$constant(model$get_layer("add_sigma")$get_weights()[[1]])
+      S_lambda.tensor=K$constant(S_lambda)
+      
+      penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
+      
+      u=y_pred[all_dims(),1]
+      scale=y_pred[all_dims(),2]
+      xi=y_pred[all_dims(),3]
+      y <- y_true
+      y=K$relu(y-u)
+      
+      if(re.par==T){
+        sigu=scale+xi*u
+      }else{
+        sigu=scale
+      }
+      
+      sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
+      
+      #Evaluate log-likelihood
+      ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
+      
+      #Uses non-zero response values only
+      ll2= K$log(sigu) *K$sign(ll1)
+      
+      return(penalty-(K$sum(ll1+ll2)))
+      
+      
     }
-    
-    sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
-    
-    #Evaluate log-likelihood
-    ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
-    
-    #Uses non-zero response values only
-    ll2= K$log(sigu) *K$sign(ll1)
-    
-    return(penalty-(K$sum(ll1+ll2)))
-    
-    
-    }
-    }
+  }
   return(loss)
 }
