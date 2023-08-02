@@ -5,12 +5,12 @@
 #'
 #'@name logistic.NN
 
-#' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
+#' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions). Defaults to an MLP.
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation response values, with entries of 0/1 for failure/success.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
 #'
-#' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+#' If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations. If \code{type=="GCNN"}, then \code{Y.train} and \code{Y.valid} must have two dimensions with the latter corresponding to \eqn{M} spatial locations.
 #' If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.
 #'
 #' @param X  list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
@@ -34,7 +34,7 @@
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{logistic.NN.train}.
 #' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
-
+#' @param A \eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied in this case.
 
 #' @details{
 #' Consider a Bernoulli random variable, say \eqn{Z\sim\mbox{Bernoulli}(p)}, with probability mass function \eqn{\Pr(Z=1)=p=1-\Pr(Z=0)=1-p}. Let \eqn{Y\in\{0,1\}} be a univariate Boolean response and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
@@ -47,6 +47,8 @@
 #' The model is fitted by minimising the binary cross-entropy loss plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
+#'
+#'A non-interpretable version of this model was exploited by Cisneros et al. (2023). Equivalence with their model is achieved by setting \code{X.lin=NULL}, \code{X.add.basis=NULL} and \code{type="GCNN"}, and using the adjacency matrix \code{A} given in the example of \code{help(AusWild)}.
 #'
 #'}
 #' @return \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -180,7 +182,7 @@
 #' @rdname logistic.NN
 #' @export
 
-logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",
+logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP", A=NULL,
                           n.ep=100, batch.size=100,init.p=NULL, widths=c(6,3), filter.dim=c(3,3),
                        seed=NULL, init.wb_path=NULL,S_lambda=NULL)
 {
@@ -191,6 +193,9 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",
   if(is.null(X)  ) stop("No predictors provided")
   if(is.null(Y.train)) stop("No training response data provided")
 
+  if(is.null(A) & type=="GCNN")stop("Adjacency matrix must be supplied if GCNN required")
+  if(!is.null(A)) if(type=="GCNN" & (length(dim(Y.train))!=2 | dim(A)[1]!=dim(A)[2] | dim(A)[1]!=dim(Y.train)[2]))stop("Dimensions of the adjacency matrix are incorrect")
+  
   X.nn=X$X.nn
   X.lin=X$X.lin
   X.add.basis=X$X.add.basis
@@ -209,15 +214,17 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",
 
   if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & !is.null(X.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
-
+  if(type=="GCNN"  & (!is.null(X.nn) ) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
+  
   print(paste0("Training for ", n.ep," epochs with a batch size of ", batch.size))
   reticulate::use_virtualenv("myenv", required = T)
 
-  if(!is.null(seed)) tf$random$set_seed(seed)
+  if(is.null(seed)) seed=1
+  tf$random$set_seed(seed)
   if(is.null(init.p)) init.p=mean(Y.train[Y.train>=0]==1)
 
 
-  model<-logistic.NN.build(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.dim)
+  model<-logistic.NN.build(X.nn,X.lin,X.add.basis, type, init.p, widths, filter.dim, A, seed)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   model %>% compile(
     optimizer="adam",
@@ -292,8 +299,49 @@ logistic.NN.predict=function(X, model)
 }
 #'
 #'
-logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.dim)
+logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths, filter.dim,  A, seed)
 {
+  
+  if(type=="GCNN"){
+    spk <<- reticulate::import("spektral", delay_load = list(
+      priority = 10,
+      environment = "myenv"
+    ))
+    
+    
+    layer_graph_conv <- function(object,
+                                 channels,
+                                 activation = NULL,
+                                 use_bias = TRUE,
+                                 kernel_initializer = 'glorot_uniform',
+                                 bias_initializer = 'zeros',
+                                 kernel_regularizer = NULL,
+                                 bias_regularizer = NULL,
+                                 activity_regularizer = NULL,
+                                 kernel_constraint = NULL,
+                                 bias_constraint = NULL,
+                                 name=NULL,
+                                 ...)
+    {
+      args <- list(channels = as.integer(channels),
+                   activation = activation,
+                   use_bias = use_bias,
+                   kernel_initializer = kernel_initializer,
+                   bias_initializer = bias_initializer,
+                   kernel_regularizer = kernel_regularizer,
+                   bias_regularizer = bias_regularizer,
+                   activity_regularizer = activity_regularizer,
+                   kernel_constraint = kernel_constraint,
+                   bias_constraint = bias_constraint,
+                   name=name
+      )
+      keras::create_layer(spk$layers$GCSConv, object, args)
+    }
+    
+    print("Normalising adjacency matrix")
+    ML<-spk$utils$convolution$normalized_adjacency(A)
+  }
+  
   #Additive input
   if(!is.null(X.add.basis))  input_add<- layer_input(shape = dim(X.add.basis)[-1], name = 'add_input_p')
 
@@ -324,6 +372,13 @@ logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths,filter.d
                                                   input_shape =dim(X.nn)[-1], name = paste0('nn_p_cnn',i) )
       }
 
+    }else if(type=="GCNN"){
+      for(i in 1:n.layers){
+        nnBranchp <- list(nnBranchp,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
+                                                              input_shape =dim(X.nn)[-1], name = paste0('nn_p_gcnn',i) ,
+                                                              kernel_initializer=initializer_glorot_uniform(seed=seed))
+      }
+      
     }
 
     nnBranchp <-   nnBranchp  %>%   layer_dense(units = nunits[n.layers+1], activation = "linear", name = 'nn_p_dense_final',

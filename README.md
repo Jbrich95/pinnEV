@@ -15,6 +15,8 @@ Note that the partially-interpretable aspect does not need to be incorporated in
 
 Note that the bGEV and bGEV-PP models are less computationally efficient than the other models due to the complexity of the likelihood; bear that in mind when running the example code!
 
+
+
 ## Installation 
 
 ```r

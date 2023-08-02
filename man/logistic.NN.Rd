@@ -6,9 +6,10 @@
 \alias{logistic.NN.predict}
 \title{Logistic regression PINN}
 \usage{
-logistic.NN.train(Y.train, Y.valid = NULL, X, type = "MLP", n.ep = 100,
-  batch.size = 100, init.p = NULL, widths = c(6, 3), filter.dim = c(3,
-  3), seed = NULL, init.wb_path = NULL, S_lambda = NULL)
+logistic.NN.train(Y.train, Y.valid = NULL, X, type = "MLP", A = NULL,
+  n.ep = 100, batch.size = 100, init.p = NULL, widths = c(6, 3),
+  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
+  S_lambda = NULL)
 
 logistic.NN.predict(X, model)
 }
@@ -17,7 +18,7 @@ logistic.NN.predict(X, model)
 Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
+If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations. If \code{type=="GCNN"}, then \code{Y.train} and \code{Y.valid} must have two dimensions with the latter corresponding to \eqn{M} spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
 \item{X}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling. Must contain at least one of the following three named entries:\describe{
@@ -31,7 +32,9 @@ The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dim
 }
 Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
-\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
+\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions). Defaults to an MLP.}
+
+\item{A}{\eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied in this case.}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
@@ -71,6 +74,8 @@ and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is est
 The model is fitted by minimising the binary cross-entropy loss plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
+
+A non-interpretable version of this model was exploited by Cisneros et al. (2023). Equivalence with their model is achieved by setting \code{X.lin=NULL}, \code{X.add.basis=NULL} and \code{type="GCNN"}, and using the adjacency matrix \code{A} given in the example of \code{help(AusWild)}.
 
 }
 }

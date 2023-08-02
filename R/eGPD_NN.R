@@ -4,7 +4,7 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).
+#'  the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -386,14 +386,14 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NUL
   if(type=="GCNN"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
   
   reticulate::use_virtualenv("myenv", required = T)
-  
-  if(!is.null(seed)) tf$random$set_seed(seed)
+  if(is.null(seed)) seed=1
+  tf$random$set_seed(seed)
   
   if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
   
   model<-eGPD.NN.build(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset,type,init.scale,init.kappa,init.xi, widths,filter.dim, A)
+                       offset,type,init.scale,init.kappa,init.xi, widths, filter.dim, A, seed)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
@@ -508,7 +508,7 @@ eGPD.NN.predict=function(X.s,X.k, model, offset=NULL)
 #'
 eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset, type, init.scale,init.kappa,init.xi, widths,filter.dim, A)
+                       offset, type, init.scale,init.kappa,init.xi, widths,filter.dim, A, seed)
 {
   
   if(type=="GCNN"){
@@ -544,11 +544,11 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
                  bias_constraint = bias_constraint,
                  name=name
     )
-    keras::create_layer(spk$layers$GCNConv, object, args)
+    keras::create_layer(spk$layers$GCSConv, object, args)
   }
   
-  print("Creating modified Laplacian")
-    ML<-spk$utils$convolution$gcn_filter(A,symmetric=T)
+  print("Normalising adjacency matrix")
+    ML<-spk$utils$convolution$normalized_adjacency(A)
   }
   
   
@@ -627,7 +627,8 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
     }else if(type=="GCNN"){
       for(i in 1:n.layers){
         nnBranchk <- list(nnBranchk,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
-                                                  input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_gcnn',i) )
+                                                  input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_gcnn',i) ,
+                                                  kernel_initializer=initializer_glorot_uniform(seed=seed))
       }
     
     }
@@ -657,7 +658,8 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
 
       for(i in 1:n.layers){
         nnBranchs <- list(nnBranchs,ML)  %>% layer_graph_conv(channels=nunits[i],activation = 'relu',
-                                                  input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_gcnn',i) )
+                                                  input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_gcnn',i) ,
+                                                  kernel_initializer=initializer_glorot_uniform(seed=seed))
       }
       
     }

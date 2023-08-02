@@ -36,7 +36,7 @@ Note that \code{X.s} and \code{X.k} are the predictors for both \code{Y.train} a
 \item{X.k}{similarly to \code{X.s}, but for modelling the shape parameter \eqn{\kappa>0}. Note that we require at least one of \code{!is.null(X.s)} or \code{!is.null(X.k)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).}
+the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).}
 
 \item{offset}{an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.}
 

@@ -54,7 +54,7 @@ Shuttle Radar Topography Mission digital elevation model (Farr et al., 2000). No
 we have stacked them into an array to have the same dimension as \code{X.met} and \code{X.NDVI}.
 
 See Cisneros et al. (2023+) for details on the construction of this dataset. Note that the example code describes the fitting of the eGPD-GCNN model used by these authors. This model exploits
-the graph convolutional neural network (GCNN) of Kipf and Welling (2016).
+the graph convolutional neural network (GCNN) of Kipf and Welling (2016), with trainable skip connection (see GCSConv layer of \href{https://graphneural.network/layers/convolution/}{https://graphneural.network/layers/convolution/}).
 }
 \examples{
 data("AusWild")
@@ -65,11 +65,13 @@ require(fields)
 h <- rdist.earth(AusWild$coords,miles=F) #Distance matrix
 
 range.par <- 300
-A <- exp(-h^2/range.par)  # or alternatively, exp(-h/range.par)
+A <- exp(-(h/range.par)^2)  # or alternatively, exp(-h/range.par)
 
 cut.off.dist <- 100
 
-A[h>cut.off.dist] <- 0 #nduce sparsity by setting values with h < cut.off.dist to zero
+A[h>cut.off.dist] <- 0 #Induce sparsity by setting values with h < cut.off.dist to zero
+
+diag(A) <- 0 #Remove self-loops
 
 #Make response
 Y<-sqrt(AusWild$BA/AusWild$CNT) # Square-root average BA per fire
