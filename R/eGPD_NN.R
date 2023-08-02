@@ -309,9 +309,9 @@
 #' @rdname eGPD.NN
 #' @export
 
-eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, A=NULL,
-                       n.ep=100, batch.size=100,init.scale=NULL, init.kappa=NULL,init.xi=NULL,
-                       widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL, S_lambda=NULL)
+eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NULL, A=NULL,
+                       n.ep=100, batch.size=100, init.scale=NULL, init.kappa=NULL, init.xi=NULL,
+                       widths=c(6,3), filter.dim=c(3,3), seed=NULL, init.wb_path=NULL, S_lambda=NULL)
 {
   
 
@@ -426,10 +426,10 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL,X.s,X.k, type="MLP",offset=NULL, 
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_eGPD_checkpoint"))
   print("Final training loss")
-  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=batch.size)
   if(!is.null(Y.valid)){
     print("Final validation loss")
-    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=batch.size)
     return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
   }else{
     return(list("model"=model,"Training loss"=loss.train))
@@ -808,12 +808,12 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
   if(!is.null(X.lin.s) ) input=c(input,input_lin_s)
   if(!is.null(X.add.basis.s) ) input=c(input,input_add_s)
   if(!is.null(X.nn.s) ) input=c(input,input_nn_s)
+  if(!is.null(offset)) input=c(input,input_offset)
   if(!is.null(X.lin.k) ) input=c(input,input_lin_k)
   if(!is.null(X.add.basis.k) ) input=c(input,input_add_k)
   if(!is.null(X.nn.k) ) input=c(input,input_nn_k)
   input=c(input)
-  if(!is.null(offset)) input=c(input,input_offset)
-  
+
   output <- layer_concatenate(c(sBranchjoined, kBranchjoined, xiBranch),name="Combine_parameter_tensors")
   
   model <- keras_model(  inputs = input,   outputs = output,name=paste0("eGPD"))

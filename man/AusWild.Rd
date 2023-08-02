@@ -33,8 +33,8 @@ with eGPD graph convolutional neural networks
 The response data \code{BA} are observations of monthly aggregated burnt area (km^2) over 7901 artificially constructed spatial polygons
 that discretise Australia and Tasmania. These polygons were constructed using Statistical Area level-1 and level-2 (SA1/SA2) census regions (ABS, 2011) to ensure that the polygons have comparable population density.
 The observation period covers June 1999 to December 2018, inclusive, leaving 235 observed spatial fields. Observations are derived from historical reported bushfire boundaries (Lizundia-Loiola et al., 2020).
-Alongside monthly values of BA, we provide \code{CNT}, the number of wildfires within each polygon. We also provide the boundaries and area of each polygon; the latter is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2023),
-and can be specified as an offset term in \link{eGPD.NN}.
+Alongside monthly values of BA, we provide \code{CNT}, the number of wildfires within each polygon. We also provide the area of each polygon; this is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2023),
+and can be specified as an offset term in \link{eGPD.NN}. The boundaries of the polygons are provided separately, see \code{help("AusWild_geom")}.
 
 Values of \code{BA} and \code{CNT} are missing in the Northern territories and have been set to \code{-1e10}; this leaves 7590 polygons with observed \code{BA >= 0}. Stored in \code{X} are the thirteen model predictors used by Cisneros et al. (2023).
 For \code{BA}, \code{CNT} and entries to \code{X}, the first two dimensions correspond to time \eqn{\times} location with
@@ -74,7 +74,7 @@ A[h>cut.off.dist] <- 0 #nduce sparsity by setting values with h < cut.off.dist t
 #Make response
 Y<-sqrt(AusWild$BA/AusWild$CNT) # Square-root average BA per fire
 Y[is.na(Y)] <- -1e10 # Any NA values set to -1e10. These are removed from evaluation of the loss function
-Y <- Y*100 #Scale by 100 for numericalstability
+Y <- Y*100 #Scale by 100 for numerical stability
 
 #Make covariates
 X <- array(dim=c(dim(Y),15))
@@ -131,6 +131,18 @@ hist(preds$pred.sigma, xlab=expression(sigma),main="")
 
 print(paste0("kappa = ", round(preds$pred.kappa[1,1],3)))
 print(paste0("xi = ", round(preds$pred.xi[1,1],3)))
+
+# To plot a map using the geometry file. See help(AusWild_geom):
+#----------------------------------------------------------------------
+# require(ggplot2)
+# data("AusWild_geom")
+# plot.df <- AusWild_geom
+# plot.df$plot.spread <- preds$pred.sigma[1,] #Plot first month of sigma estimates
+ 
+# ggplot(data = plot.df) + xlab("")+ylab("")+
+#   geom_sf(mapping = aes_string(fill="plot.spread"), color = "black",size = 0.1 ) +
+#   scale_fill_viridis(name="",option = "F",direction=-1,alpha=.7)
+
 }
 \references{
 Farr, T. G. and Kobrick, M. (2000). \emph{Shuttle radar topography mission produces a wealth of data.} Eos, Transactions American Geophysical Union, 81(48):583–585. (\href{https://doi.org/10.1029/EO081i048p00583}{doi}).

@@ -405,10 +405,10 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, u = NULL, type="MLP",l
   print("Loading checkpoint weights")
   model <- load_model_weights_tf(model,filepath=paste0("model_bGEVPP_checkpoint"))
   print("Final training loss")
-  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=50)
+  loss.train<-model %>% evaluate(train.data,Y.train, batch_size=batch.size)
   if(!is.null(Y.valid)){
     print("Final validation loss")
-    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=50)
+    loss.valid<-model %>% evaluate(train.data,Y.valid, batch_size=batch.size)
     return(list("model"=model,"Training loss"=loss.train, "Validation loss"=loss.valid))
   }else{
     return(list("model"=model,"Training loss"=loss.train))
