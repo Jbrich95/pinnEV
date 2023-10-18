@@ -147,6 +147,7 @@
 #' # To plot a map using the geometry file. See help(AusWild_geom):
 #' #----------------------------------------------------------------------
 #' # require(ggplot2)
+#' # require(viridis)
 #' # data("AusWild_geom")
 #' # plot.df <- AusWild_geom
 #' # plot.df$plot.spread <- preds$pred.sigma[1,] #Plot first month of sigma estimates
