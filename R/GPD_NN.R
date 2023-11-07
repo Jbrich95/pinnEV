@@ -557,7 +557,7 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
       sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sigu)
       
       #Uses non-zero response values only
       ll2= K$log(sigu) *K$sign(ll1)
@@ -590,7 +590,7 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
       sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sigu)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sigu)
       
       #Uses non-zero response values only
       ll2= K$log(sigu) *K$sign(ll1)

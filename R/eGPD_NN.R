@@ -847,7 +847,7 @@ eGPD_loss <-function(S_lambda=NULL){
       
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
       
       #Uses non-zero response values only
       ll2= K$log(sig) *K$sign(ll1)
@@ -890,7 +890,7 @@ eGPD_loss <-function(S_lambda=NULL){
       
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
       
       #Uses non-zero response values only
       ll2= K$log(sig) *K$sign(ll1)
@@ -932,7 +932,7 @@ eGPD_loss <-function(S_lambda=NULL){
   
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
       
       #Uses non-zero response values only
       ll2= K$log(sig) *K$sign(ll1)
@@ -975,7 +975,7 @@ eGPD_loss <-function(S_lambda=NULL){
       
       
       #Evaluate log-likelihood
-      ll1=-(1/xi+1)*K$log(1+xi*y/sig)
+      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
       
       #Uses non-zero response values only
       ll2= K$log(sig) *K$sign(ll1)
