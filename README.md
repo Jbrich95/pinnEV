@@ -5,10 +5,10 @@ Note that the partially-interpretable aspect does not need to be incorporated in
 
 ## Implemented models
 * Generalised Pareto distribution (GPD) - see Coles, S.G. (2001) [doi:10.1007/978-1-4471-3675-0](https://doi.org/10.1007/978-1-4471-3675-0)
-* Re-parameterised GPD (with offset scale) - see Richards, J., et al., (2022) [arXiv:2212.01796](https://arxiv.org/abs/2212.01796)
+* Re-parameterised GPD (with offset scale) - see Richards, J., et al., (2023) [arXiv:2212.01796](https://arxiv.org/abs/2212.01796)
 * Blended Generalised Extreme Value (bGEV) distribution - see Castro-Camilo, D., et al. (2022) [doi:10.1002/env.2742](https://doi.org/10.1002/env.2742)
 * bGEV point process (bGEV-PP) - see Richards, J. and Huser, R. (2022) [arXiv:2208.07581](https://arxiv.org/abs/2208.07581)
-* extended GPD (eGPD; with offset scale) - see Cisneros, D., et al., (2023) (In draft).
+* Extended GPD (eGPD; with offset scale) - see Cisneros, D., et al., (2023) (In draft).
 * Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143)
 * Bernoulli/logistic
 * Log-normal
