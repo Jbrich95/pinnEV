@@ -972,7 +972,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
       
       
       l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
+      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEVPP_NN.R, but with exceedInds=obsInds
       
       l2=K$log(l2+(1-obsInds))*obsInds
       
