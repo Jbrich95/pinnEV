@@ -6,11 +6,11 @@
 #'The response data \code{BA} are observations of monthly aggregated burnt area (km^2) over 7901 artificially constructed spatial polygons 
 #'that discretise Australia and Tasmania. These polygons were constructed using Statistical Area level-1 and level-2 (SA1/SA2) census regions (ABS, 2011) to ensure that the polygons have comparable population density.
 #'The observation period covers June 1999 to December 2018, inclusive, leaving 235 observed spatial fields. Observations are derived from historical reported bushfire boundaries (Lizundia-Loiola et al., 2020). 
-#'Alongside monthly values of BA, we provide \code{CNT}, the number of wildfires within each polygon. We also provide the area of each polygon; this is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2023), 
+#'Alongside monthly values of BA, we provide the area of each polygon; this is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2023), 
 #'and can be specified as an offset term in [pinnEV::eGPD.NN]. The boundaries of the polygons are provided separately, see \code{help("AusWild_geom")}.
 #'
-#'Values of \code{BA} and \code{CNT} are missing in the Northern territories and have been set to \code{-1e10}; this leaves 7590 polygons with observed \code{BA >= 0}. Stored in \code{X} are the thirteen model predictors used by Cisneros et al. (2023).
-#'For \code{BA}, \code{CNT} and entries to \code{X}, the first two dimensions correspond to time \eqn{\times} location with 
+#'Values of \code{BA} are missing in the Northern territories and have been set to \code{-1e10}; this leaves 7590 polygons with observed \code{BA >= 0}. Stored in \code{X} are the thirteen model predictors used by Cisneros et al. (2023).
+#'For \code{BA} and entries to \code{X}, the first two dimensions correspond to time \eqn{\times} location with 
 #'their respective ordinate values given in \code{times} and \code{coords}; \code{coords} is a 7901 by 2 matrix correspond to the longitude and latitude coordinates of the centroid of each polygon.
 #'
 #'We have three types of predictor variables in \code{X}: meteorological (\code{X.met}), NDVI (\code{X.NDVI}) and topographical (\code{X.topo}).
@@ -35,7 +35,6 @@
 #' @format A list with 6 elements:
 #' \describe{
 #' \item{BA}{An array with dimension (235, 7901), corresponding to the monthly burnt area response data.}
-#'  \item{CNT}{An array with dimension (235, 7901), corresponding to the monthly fire counts within each spatial polygon.}
 
 #'  \item{a.s}{A vector of length (7901), giving the area of each spatial polygon.}
 
@@ -74,19 +73,18 @@
 #' require(fields)
 #' h <- rdist.earth(AusWild$coords,miles=F) #Distance matrix
 #' 
-#' range.par <- 300
+#' range.par <- 650
 #' A <- exp(-(h/range.par)^2)  # or alternatively, exp(-h/range.par)
 #' 
-#' cut.off.dist <- 100
+#' cut.off.dist <- 700
 #' 
 #' A[h>cut.off.dist] <- 0 #Induce sparsity by setting values with h < cut.off.dist to zero
 #' 
 #' diag(A) <- 0 #Remove self-loops
 #' 
 #' #Make response
-#' Y<-sqrt(AusWild$BA/AusWild$CNT) # Square-root average BA per fire
+#' Y<-sqrt(AusWild$BA) # Square-root average BA per fire
 #' Y[is.na(Y)] <- -1e10 # Any NA values set to -1e10. These are removed from evaluation of the loss function
-#' Y <- Y*100 #Scale by 100 for numerical stability
 #' 
 #' #Make covariates
 #' X <- array(dim=c(dim(Y),15))
