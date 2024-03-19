@@ -4,71 +4,64 @@
 \alias{bGEVPP.NN}
 \alias{bGEVPP.NN.train}
 \alias{bGEVPP.NN.predict}
-\title{blended-GEV point process PINN}
+\title{blended-GEV point process PINN model}
 \usage{
-bGEVPP.NN.train(Y.train, Y.valid = NULL, X.q, X.s, u = NULL,
-  type = "MLP", link.loc = "identity", n.ep = 100, batch.size = 100,
-  init.loc = NULL, init.spread = NULL, init.xi = NULL, widths = c(6,
-  3), filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
-  alpha = 0.5, beta = 0.5, p_a = 0.05, p_b = 0.2, c1 = 5, c2 = 5,
-  n_b = 1, S_lambda = NULL)
+bGEVPP.NN.train(Y.train, Y.valid = NULL, X, u = NULL, types = "MLP",
+  link.loc = "identity", n.ep = 100, batch.size = 100, init.loc = NULL,
+  init.spread = NULL, init.xi = NULL, widths = c(6, 6), seed = NULL,
+  init.wb_path = NULL, alpha = 0.5, beta = 0.5, p_a = 0.05,
+  p_b = 0.2, c1 = 5, c2 = 5, n_b = 1)
 
-bGEVPP.NN.predict(X.q, X.s, u, model)
+bGEVPP.NN.predict(X, u, model)
 }
 \arguments{
-\item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real response values.
-Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
+\item{Y.train, Y.valid}{a 2 or 3 dimensional array of training or validation real-valued response data.
+Missing values can be handled by setting corresponding entries of \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 The first dimension should be the observation indices, e.g., time.
 
-If \code{type=="CNN"}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.
 If \code{Y.valid==NULL}, no validation loss will be computed and the returned model will be that which minimises the training loss over \code{n.ep} epochs.}
 
-\item{X.q}{list of arrays corresponding to complementary subsets of the \eqn{d\geq 1} predictors which are used for modelling the location parameter \eqn{q_\alpha}. Must contain at least one of the following three named entries:\describe{
-\item{\code{X.lin.q}}{A 3 or 4 dimensional array of "linear" predictor values. One more dimension than \code{Y.train}. If \code{NULL}, a model without the linear component is built and trained.
+\item{X}{a list of arrays corresponding to the complementary subsets of the \eqn{d\geq 1} predictors which are used in the PINN model for each parameter. Must contain at least one of the following named entries:\describe{
+\item{\code{X_L.q}}{A 3 or 4 dimensional array of "linear" predictor values used in modelling \eqn{q_\alpha}. Must have more dimension than \code{Y.train}.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{l_1\geq 0} 'linear' predictor values.}
-\item{\code{X.add.basis.q}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values.
-The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a_1\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example.
-If \code{NULL}, a model without the additive component is built and trained.}
-\item{\code{X.nn.q}}{A 3 or 4 dimensional array of "non-additive" predictor values.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{type} has no effect.
+\item{\code{X_A.basis.q}}{A 4 or 5 dimensional array of basis function evaluations for the "additive" predictor values used in modelling \eqn{q_\alpha}.
+The first 2/3 dimensions should be equal to that of \code{Y.train}; the penultimate dimensions corresponds to the chosen \eqn{a_1\geq 0} 'linear' predictor values and the last dimension is equal to the number of knots used for estimating the splines. See example code.}
+\item{\code{X_N.q}}{A 3 or 4 dimensional array of "non-additive" predictor values used in the neural network component of the PINN for \eqn{q_\alpha}.  If \code{NULL}, a model without the NN component is built and trained; if this is the case, then \code{types$q.NN} has no effect on the model.
 The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dimension corresponds to the chosen \eqn{d-l_1-a_1\geq 0} 'non-additive' predictor values.}
+\item{\code{X_L.s}, \code{X_A.basis.s}, \code{X_N.s}, \code{X_L.xi}, \code{X_A.basis.xi}, \code{X_N.xi}}{As above, but these predictors feature in the PINN models for \eqn{s_\beta} and \eqn{\xi}.}
 }
-Note that \code{X.q} and \code{X.s} are the predictors for both \code{Y.train} and \code{Y.valid}. If \code{is.null(X.q)}, then \eqn{q_\alpha} will be treated as fixed over the predictors.}
-
-\item{X.s}{similarly to \code{X.q}, but for modelling the scale parameter \eqn{s_\beta>0}.  Note that we require at least one of \code{!is.null(X.q)} or \code{!is.null(X.s)}, otherwise the formulated model will be fully stationary and will not be fitted.}
+Note that entries to \code{X} denote the predictors for both \code{Y.train} and \code{Y.valid}. If any of the arrays in \code{X} are missing or set to \code{NULL}, the corresponding component of the PINN model is removed. For example, if \code{is.null(X$X_L.xi)}, no linear model is used within the PINN for \eqn{\xi}.}
 
 \item{u}{an array with the same dimension as \code{Y.train}. Gives the threshold above which the bGEV-PP model is fitted, see below. Note that \code{u} is applied to both \code{Y.train} and \code{Y.valid}.}
 
-\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
+\item{types}{named list of strings defining the types of neural network to be built for each parameter. Has three entries: \code{q.NN}, \code{s.NN}, and \code{xi.NN}. Each entry takes one of two values: if \code{types$q.NN=="MLP"},
+the neural network in the model for \eqn{q_\alpha} will have all densely-connected layers; if \code{types$q.NN=="CNN"}, this neural network will instead have all convolutional layers (with 3 by 3 filters). If only a single string provided, e.g., \code{types=="MLP"}, then the neural network type is shared across all parameters. Defaults to an MLP.
+If \code{any(types=="CNN")}, then \code{Y.train} and \code{Y.valid} must have three dimensions with the latter two corresponding to an \eqn{M} by \eqn{N} regular grid of spatial locations.}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
-\item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
+\item{batch.size}{mini-batch size used for training with stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
 
-\item{init.loc, init.spread, init.xi}{sets the initial \eqn{q_\alpha,s_\beta} and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.}
+\item{init.loc, init.spread, init.xi}{sets the initial estimate of \eqn{q_\alpha,s_\beta}, and \eqn{\xi\in(0,1)} estimates across all dimensions of \code{Y.train}. Overridden by \code{init.wb_path} if \code{!is.null(init.wb_path)}, but otherwise the initial parameters must be supplied.}
 
-\item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
-
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.}
+\item{widths}{named list of vectors giving the widths/filters for the hidden dense/convolution layers for each parameter, see example. Entries take the same names as argument \code{types}. The number of hidden layers in the neural network of the corresponding PINN model is equal to the length of the provided vector. For example, setting \code{types$q.NN="MLP"} and \code{widths$q.NN=c(6,6,6)} will construct a MLP for \eqn{q_\alpha} that has three hidden layers, each with width six. If \code{widths} provides a single vector in place of a list, this architecture will be shared across all parameters. Defaults to (6,6).}
 
 \item{seed}{seed for random initial weights and biases.}
 
 \item{init.wb_path}{filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
-final layer has zero initial weights to ensure that the initial location, spread and shape estimates are \code{init.loc, init.spread} and \code{init.xi}, respectively,  across all dimensions.}
+final layer has zero initial weights to ensure that the initial location, spread and shape estimates are \code{init.loc, init.spread}, and \code{init.xi}, respectively,  across all dimensions.}
 
 \item{alpha, beta, p_a, p_b, c1, c2}{hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.}
 
 \item{n_b}{number of observations per block, e.g., if observations correspond to months and the interest is annual maxima, then \code{n_b=12}.}
-
-\item{S_lambda}{List of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 
 \item{loc.link}{string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.}
 }
 \value{
-\code{bGEVPP.NN.train} returns the fitted \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
+\code{bGEVPP.NN.train} returns the fitted Keras \code{model}.  \code{bGEVPP.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
 }
 \description{
 Build and train a partially-interpretable neural network for fitting a bGEV point-process model
@@ -76,20 +69,20 @@ Build and train a partially-interpretable neural network for fitting a bGEV poin
 \details{
 {
 Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
-For \eqn{i=1,2}, we define integers \eqn{l_i\geq 0,a_i \geq 0} and \eqn{0\leq l_i+a_i \leq d}, and let \eqn{\mathbf{X}^{(i)}_L, \mathbf{X}^{(i)}_A} and \eqn{\mathbf{X}^{(i)}_N} be distinct sub-vectors
-of \eqn{\mathbf{X}}, with observations of each component denoted \eqn{\mathbf{x}^{(i)}_L, \mathbf{x}^{(i)}_A} and \eqn{\mathbf{x}^{(i)}_N}, respectively; the lengths of the sub-vectors are \eqn{l_i,a_i} and \eqn{d_i-l_i-a}, respectively.
-For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{bGEV-PP}(q_\alpha(\mathbf{x}),s_\beta(\mathbf{x}),\xi;u(\mathbf{x}))} for \eqn{\xi\in(0,1)} with
-\deqn{q_\alpha (\mathbf{x})=h_1\{\eta^{(1)}_0+m^{(1)}_L(\mathbf{x}^{(1)}_L)+m^{(1)}_A(x^{(1)}_A)+m^{(1)}_N(\mathbf{x}^{(1)}_N)\}} and
-\deqn{s_\beta (\mathbf{x})=\exp\{\eta^{(2)}_0+m^{(2)}_L(\mathbf{x}^{(2)}_L)+m^{(2)}_A(x^{(2)}_A)+m^{(2)}_N(\mathbf{x}^{(2)}_N)\}}
-where \eqn{h_1} is some link-function and \eqn{\eta^{(1)}_0,\eta^{(2)}_0} are constant intercepts. The unknown functions \eqn{m^{(1)}_L,m^{(2)}_L} and
-\eqn{m^{(1)}_A,m^{(2)}_A} are estimated using linear functions and splines, respectively, and are
-both returned as outputs by \code{bGEVPP.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} are estimated using neural networks
-(currently the same architecture is used for both parameters). Note that \eqn{\xi>0} is fixed across all predictors; this may change in future versions.
+For \eqn{i=1,2,3}, we define integers \eqn{l_i\geq 0,a_i \geq 0}, and \eqn{0\leq l_i+a_i \leq d}, and let \eqn{\mathbf{X}^{(i)}_L, \mathbf{X}^{(i)}_A}, and \eqn{\mathbf{X}^{(i)}_N} be distinct sub-vectors
+of \eqn{\mathbf{X}}, with observations of each component denoted by \eqn{\mathbf{x}^{(i)}_L, \mathbf{x}^{(i)}_A}, and \eqn{\mathbf{x}^{(i)}_N}, respectively; the lengths of the sub-vectors are \eqn{l_i,a_i}, and \eqn{d_i-l_i-a}, respectively.
+For a fixed threshold \eqn{u(\mathbf{x})}, dependent on predictors, we model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{bGEV-PP}(q_\alpha(\mathbf{x}),s_\beta(\mathbf{x}),\xi(\mathbf{x});u(\mathbf{x}))} for \eqn{\xi\in(0,1)} with
+\deqn{q_\alpha (\mathbf{x})=h_1\{\eta^{(1)}_0+m^{(1)}_L(\mathbf{x}^{(1)}_L)+m^{(1)}_A(x^{(1)}_A)+m^{(1)}_N(\mathbf{x}^{(1)}_N)\},}
+\deqn{s_\beta (\mathbf{x})=\exp\{\eta^{(2)}_0+m^{(2)}_L(\mathbf{x}^{(2)}_L)+m^{(2)}_A(x^{(2)}_A)+m^{(2)}_N(\mathbf{x}^{(2)}_N)\},} and
+\deqn{\xi(\mathbf{x})=logistic\{\eta^{(3)}_0+m^{(3)}_L(\mathbf{x}^{(3)}_L)+m^{(3)}_A(x^{(3)}_A)+m^{(3)}_N(\mathbf{x}^{(3)}_N)\},}
+where \eqn{h_1} is some link-function and \eqn{\eta^{(i)}_0} are constant intercepts. The unknown functions \eqn{m^{(i)}_L} and
+\eqn{m^{(i)}_A} are estimated using linear functions and splines, respectively, and are
+both returned as outputs by \code{bGEVPP.N.predict}; each \eqn{m^{(i)}_N} are estimated using neural networks.
 
 Note that for sufficiently large \eqn{u} that \eqn{Y\sim\mbox{bGEV-PP}(q_\alpha,s_\beta,\xi;u)} implies that \eqn{\max_{i=1,\dots,n_b}\{Y_i\}\sim \mbox{bGEV}(q_\alpha,s_\beta,\xi)},
 i.e., the \eqn{n_b}-block maxima of independent realisations of \eqn{Y} follow a bGEV distribution (see \code{help(pbGEV)}). The size of the block can be specified by the parameter \code{n_b}.
 
-The model is fitted by minimising the negative log-likelihood associated with the bGEV-PP model plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+The model is fitted by minimising the negative log-likelihood associated with the bGEV-PP model; training is performed over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -104,64 +97,68 @@ set.seed(1)
 # Create  predictors
 preds<-rnorm(prod(c(200,10,10,8)))
 
-#Re-shape to a 4d array. First dimension corresponds to observations,
-#last to the different components of the predictor set.
-#Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
-dim(preds)=c(200,10,10,8) 
-#We have 200 observations of eight predictors on a 10 by 10 grid.
 
-#Split predictors into linear, additive and nn. Different for the location and scale parameters.
-X.nn.q=preds[,,,1:4] #Four nn predictors for q_\alpha
-X.lin.q=preds[,,,5:6] #Two additive predictors for q_\alpha
-X.add.q=preds[,,,7:8] #Two additive predictors for q_\alpha
+# Re-shape to a 4d array. First dimension corresponds to observations,
+# last to the different components of the predictor set.
+# Other dimensions correspond to indices of predictors, e.g., a grid of locations. Can be just a 1D grid.
+dim(preds)=c(200,10,10,8)
+# We have 200 observations of eight predictors on a 10 by 10 grid.
 
-X.nn.s=preds[,,,1:2] #Two nn predictors for s_\beta
-X.lin.s=preds[,,,3] #One linear predictor for s_\beta
-dim(X.lin.s)=c(dim(X.lin.s),1) #Change dimension so consistent
-X.add.s=preds[,,,4] #One additive predictor for s_\beta
-dim(X.add.s)=c(dim(X.add.s),1) #Change dimension so consistent
+
+# Split predictors into linear, additive, and nn. Different for the location and scale parameters.
+X_N.q=preds[,,,1:4] #Four nn predictors for q_\alpha
+X_L.q=preds[,,,5:6] #Two additive predictors for q_\alpha
+X_A.q=preds[,,,7:8] #Two additive predictors for q_\alpha
+
+X_N.s=preds[,,,1:2] #Two nn predictors for s_\beta
+X_L.s=preds[,,,3] #One linear predictor for s_\beta
+dim(X_L.s)=c(dim(X_L.s),1) #Change dimension so consistent
+X_A.s=preds[,,,4] #One additive predictor for s_\beta
+dim(X_A.s)=c(dim(X_A.s),1) #Change dimension so consistent
 
 # Create toy response data
 
-#Contribution to location parameter
-#Linear contribution
-m_L_1 = 0.3*X.lin.q[,,,1]+0.6*X.lin.q[,,,2]
+# Contribution to location parameter
+# Linear contribution
+m_L_1 = 0.3*X_L.q[,,,1]+0.6*X_L.q[,,,2]
 
 # Additive contribution
-m_A_1 = 0.1*X.add.q[,,,1]^3+0.2*X.add.q[,,,1]-
- 0.1*X.add.q[,,,2]^3+0.5*X.add.q[,,,2]^2
+m_A_1 = 0.1*X_A.q[,,,1]^3+0.2*X_A.q[,,,1]-
+  0.1*X_A.q[,,,2]^3+0.5*X_A.q[,,,2]^2
 
-#Non-additive contribution - to be estimated by NN
-m_N_1 = 0.5*exp(-3+X.nn.q[,,,4]+X.nn.q[,,,1])+
- sin(X.nn.q[,,,1]-X.nn.q[,,,2])*(X.nn.q[,,,4]+X.nn.q[,,,2])-
- cos(X.nn.q[,,,4]-X.nn.q[,,,1])*(X.nn.q[,,,3]+X.nn.q[,,,1])
+# Non-additive contribution - to be estimated by NN
+m_N_1 = 0.5*exp(-3+X_N.q[,,,4]+X_N.q[,,,1])+
+  sin(X_N.q[,,,1]-X_N.q[,,,2])*(X_N.q[,,,4]+X_N.q[,,,2])-
+  cos(X_N.q[,,,4]-X_N.q[,,,1])*(X_N.q[,,,3]+X_N.q[,,,1])
 
 q_alpha=1+m_L_1+m_A_1+m_N_1 #Identity link
 
-#Contribution to scale parameter
-#Linear contribution
-m_L_2 = 0.5*X.lin.s[,,,1]
+# Contribution to scale parameter
+# Linear contribution
+m_L_2 = 0.5*X_L.s[,,,1]
 
 # Additive contribution
-m_A_2 = 0.1*X.add.s[,,,1]^2+0.2*X.add.s[,,,1]
+m_A_2 = 0.1*X_A.s[,,,1]^2+0.2*X_A.s[,,,1]
 
-#Non-additive contribution - to be estimated by NN
-m_N_2 = 0.2*exp(-4+X.nn.s[,,,2]+X.nn.s[,,,1])+
- sin(X.nn.s[,,,1]-X.nn.s[,,,2])*(X.nn.s[,,,1]+X.nn.s[,,,2])
+# Non-additive contribution - to be estimated by NN
+m_N_2 = 0.2*exp(-4+X_N.s[,,,2]+X_N.s[,,,1])+
+  sin(X_N.s[,,,1]-X_N.s[,,,2])*(X_N.s[,,,1]+X_N.s[,,,2])
 
 s_beta=0.2*exp(m_L_2+m_A_2+m_N_2) #Exponential link
 
+# We will keep xi fixed across predictors
 xi=0.1 # Set xi
 
 theta=array(dim=c(dim(s_beta),3))
 theta[,,,1]=q_alpha; theta[,,,2] = s_beta; theta[,,,3]=xi
-#We simulate data from the extreme value point process model with u take as the 80\% quantile
 
-#Gives the 80\% quantile of Y
-u<-apply(theta,1:3,function(x) qPP(prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par = T)) 
+# We simulate data from the extreme value point process model with u take as the 80\% quantile
 
-#Simulate from re-parametrised point process model using same u as given above
-Y=apply(theta,1:3,function(x) rPP(1,u.prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par=T)) 
+# Gives the 80\% quantile of Y
+u<-apply(theta,1:3,function(x) qPP(prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par = T))
+
+# Simulate from re-parametrised point process model using same u as given above
+Y=apply(theta,1:3,function(x) rPP(1,u.prob=0.8,loc=x[1],scale=x[2],xi=x[3],re.par=T))
 
 # Note that the point process model is only valid for Y > u. If Y < u, then rPP gives NA.
 # We can set NA values to some c < u as these do not contribute to model fitting.
@@ -169,131 +166,115 @@ Y[is.na(Y)]=u[is.na(Y)]-1
 
 
 
-#Create training and validation, respectively.
-#We mask 20\% of the Y values and use this for validation
-#Masked values must be set to -1e10 and are treated as missing whilst training
+# Create training and validation, respectively.
+# We mask 20\% of the Y values and use this for validation
+# Masked values must be set to -1e10 and are treated as missing whilst training
 
 mask_inds=sample(1:length(Y),size=length(Y)*0.8)
 
-Y.train<-Y.valid<-Y #Create training and validation, respectively.
+Y.train<-Y.valid<-Y # Create training and validation data, respectively.
 Y.train[-mask_inds]=-1e10
 Y.valid[mask_inds]=-1e10
 
 
 
-#To build a model with an additive component, we require an array of evaluations of
-#the basis functions for each pre-specified knot and entry to X.add.q and X.add.s
+# To build a model with an additive component, we require an array of evaluations of
+# the basis functions for each pre-specified knot and entry to X_A.q and X_A.s
 
-rad=function(x,c){ #Define a basis function. Here we use the radial bases
+rad=function(x,c){ # Define a basis function. Here we use radial basis
   out=abs(x-c)^2*log(abs(x-c))
   out[(x-c)==0]=0
- return(out)
+  return(out)
 }
 
 n.knot.q = 5; n.knot.s = 4 # set number of knots.
-#Must be the same for each additive predictor,
-#but can differ between the parameters q_\alpha and s_\beta
+# Must be the same for each additive predictor,
+# but can differ between the parameters q_\alpha and s_\beta
 
-#Get knots for q_\alpha predictors
-knots.q=matrix(nrow=dim(X.add.q)[4],ncol=n.knot.q)
+# Get knots for q_\alpha predictors
+knots.q=matrix(nrow=dim(X_A.q)[4],ncol=n.knot.q)
 
-#We set knots to be equally-spaced marginal quantiles
-for( i in 1:dim(X.add.q)[4]){
- knots.q[i,]=quantile(X.add.q[,,,i],probs=seq(0,1,length=n.knot.q))
+# We set knots to be equally-spaced marginal quantiles
+for( i in 1:dim(X_A.q)[4]){
+  knots.q[i,]=quantile(X_A.q[,,,i],probs=seq(0,1,length=n.knot.q))
 }
 
-#Evaluate radial basis functions for q_\alpha predictors
-X.add.basis.q<-array(dim=c(dim(X.add.q),n.knot.q))
-for( i in 1:dim(X.add.q)[4]) {
+# Evaluate radial basis functions for q_\alpha predictors
+X_A.basis.q<-array(dim=c(dim(X_A.q),n.knot.q))
+for( i in 1:dim(X_A.q)[4]) {
   for(k in 1:n.knot.q) {
-    X.add.basis.q[,,,i,k]= rad(x=X.add.q[,,,i],c=knots.q[i,k])
-    #Evaluate rad at all entries to X.add.q and for all knots
+    X_A.basis.q[,,,i,k]= rad(x=X_A.q[,,,i],c=knots.q[i,k])
+    # Evaluate rad at all entries to X_A.q and for all knots
   }}
 
-  #'#Create smoothing penalty matrix for the two q_alpha additive functions
 
-# Set smoothness parameters for two functions
- lambda = c(0.1,0.2) 
 
-S_lambda.q=matrix(0,nrow=n.knot.q*dim(X.add.q)[4],ncol=n.knot.q*dim(X.add.q)[4])
-for(i in 1:dim(X.add.q)[4]){
- for(j in 1:n.knot.q){
-  for(k in 1:n.knot.q){
-     S_lambda.q[(j+(i-1)*n.knot.q),(k+(i-1)*n.knot.q)]=lambda[i]*rad(knots.q[i,j],knots.q[i,k])
-  }
-}
+# Get knots for s_\beta predictor
+knots.s=matrix(nrow=dim(X_A.s)[4],ncol=n.knot.s)
+for( i in 1:dim(X_A.s)[4]){
+  knots.s[i,]=quantile(X_A.s[,,,i],probs=seq(0,1,length=n.knot.s))
 }
 
-#Get knots for s_\beta predictor
-knots.s=matrix(nrow=dim(X.add.s)[4],ncol=n.knot.s)
-for( i in 1:dim(X.add.s)[4]){
- knots.s[i,]=quantile(X.add.s[,,,i],probs=seq(0,1,length=n.knot.s))
-}
-
-#Evaluate radial basis functions for s_\beta predictor
-X.add.basis.s<-array(dim=c(dim(X.add.s),n.knot.s))
-for( i in 1:dim(X.add.s)[4]) {
+# Evaluate radial basis functions for s_\beta predictor
+X_A.basis.s<-array(dim=c(dim(X_A.s),n.knot.s))
+for( i in 1:dim(X_A.s)[4]) {
   for(k in 1:n.knot.s) {
-    X.add.basis.s[,,,i,k]= rad(x=X.add.s[,,,i],c=knots.s[i,k])
-    #Evaluate rad at all entries to X.add.q and for all knots
+    X_A.basis.s[,,,i,k]= rad(x=X_A.s[,,,i],c=knots.s[i,k])
+    #Evaluate rad at all entries to X_A.q and for all knots
   }}
 
-#Create smoothing penalty matrix for the s_beta additive function
 
-# Set smoothness parameter
- lambda = c(0.2) 
 
-S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.add.s)[4],ncol=n.knot.s*dim(X.add.s)[4])
-for(i in 1:dim(X.add.s)[4]){
- for(j in 1:n.knot.s){
-  for(k in 1:n.knot.s){
-     S_lambda.s[(j+(i-1)*n.knot.s),(k+(i-1)*n.knot.s)]=lambda[i]*rad(knots.s[i,j],knots.s[i,k])
-  }
-}
-}
- 
-#Join in one list
-S_lambda =list("S_lambda.q"=S_lambda.q, "S_lambda.s"=S_lambda.s)
+# We define PINN (lin+GAM+NN) models for both the location and scale parameter
+# Combine into a list of predictors
+X = list(
+  "X_N.q"=X_N.q, "X_L.q"=X_L.q,
+  "X_A.basis.q"=X_A.basis.q, #Predictors for q_\alpha
+  "X_N.s"=X_N.s, "X_L.s"=X_L.s,
+  "X_A.basis.s"=X_A.basis.s,
+  "X_A.basis.xi"=X_A.basis.s) #Predictors for s_\beta
+# Note that we have not defined covariates for xi, so this will be treated as constant with respect to the predictors
 
-#lin+GAM+NN models defined for both location and scale parameters
-X.q=list("X.nn.q"=X.nn.q, "X.lin.q"=X.lin.q,
-               "X.add.basis.q"=X.add.basis.q) #Predictors for q_\alpha
-X.s=list("X.nn.s"=X.nn.s, "X.lin.s"=X.lin.s,
-               "X.add.basis.s"=X.add.basis.s) #Predictors for s_\beta
 
-#We treat u as fixed and known. In an application, u can be estimated using quant.NN.train.
+# We here treat u as fixed and known. In an application, u can be estimated using quant.N.train.
 
-#Fit the bGEV-PP model using u. Note that training is not run to completion.
-NN.fit<-bGEVPP.NN.train(Y.train, Y.valid,X.q,X.s, u, type="MLP",link.loc="identity",
-                       n.ep=500, batch.size=50,init.loc=2, init.spread=2,init.xi=0.1,
-                       widths=c(6,3),seed=1, n_b=12,S_lambda=S_lambda)
-out<-bGEVPP.NN.predict(X.q=X.q,X.s=X.s,u=u,NN.fit$model)
+# Choose NN archiecture for different parameters
+NN.types = list("q.NN"="MLP","s.NN"="CNN") # Layer types
+NN.widths = list("q.NN"=c(6,6),"s.NN"=c(4,4)) # Layers/widths
+
+# Fit the bGEV-PP model using u. Note that training is not run to completion.
+NN.fit<-bGEVPP.NN.train(Y.train, Y.valid,X, u=u, types=NN.types,
+                       link.loc="identity",
+                       n.ep=20, batch.size=50,
+                       init.loc=2, init.spread=2, init.xi=0.1,
+                       widths=NN.widths, seed=1, n_b=12)
+out<-bGEVPP.NN.predict(X,u=u,NN.fit$model)
 
 print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
 print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 
-# Note that this is a simple example that can be run in a personal computer. 
+# Note that this is a simple example that can be run in a personal computer.
 # Whilst the q_alpha functions are well estimated, more data/larger n.ep are required for more accurate
 # estimation of s_beta functions and xi
 
-#To save model, run
-#model \%>\% NN.fit$save_model_tf("model_bGEVPP")
-#To load model, run
-# model  <- load_model_tf("model_bGEVPP",
-#  custom_objects=list(
-#    "bgev_PP_loss_alpha__beta__p_a__p_b__c1__c2__n_b__S_lambda___S_lambda_"=
-#      bgev_PP_loss(n_b=12,S_lambda=S_lambda))
-#        )
+# To save model, run
+NN.fit$model \%>\% save_model_tf("model_bGEVPP")
+# To load model, run
+model  <- load_model_tf("model_bGEVPP",
+                        custom_objects=list(
+                          "bgev_PP_loss_alpha__beta__p_a__p_b__c1__c2__n_b_"=
+                            bgev_PP_loss(n_b=12))
+)
 
-#Note that bGEV_PP_loss() can take custom alpha,beta, p_a, p_b, c1 and c2 arguments if defaults not used.
+# Note that bGEV_PP_loss() can take custom alpha,beta, p_a, p_b, c1 and c2 arguments if defaults not used.
 
 
 # Plot splines for the additive predictors
 
-#Location predictors
-n.add.preds_q=dim(X.add.q)[length(dim(X.add.q))]
-par(mfrow=c(1,n.add.preds_q))
-for(i in 1:n.add.preds_q){
+# Location predictors
+n.A.preds_q=dim(X_A.q)[length(dim(X_A.q))]
+par(mfrow=c(1,n.A.preds_q))
+for(i in 1:n.A.preds_q){
   plt.x=seq(from=min(knots.q[i,]),to=max(knots.q[i,]),length=1000)  #Create sequence for x-axis
 
   tmp=matrix(nrow=length(plt.x),ncol=n.knot.q)
@@ -303,24 +284,24 @@ for(i in 1:n.add.preds_q){
   plt.y=tmp\%*\%out$gam.weights_q[i,]
   plot(plt.x,plt.y,type="l",main=paste0("q_alpha spline: predictor ",i),xlab="x",ylab="f(x)")
   points(knots.q[i,],rep(mean(plt.y),n.knot.q),col="red",pch=2)
-  #Adds red triangles that denote knot locations
+  # Adds red triangles that denote knot locations
 
 }
 
-#Spread predictors
-n.add.preds_s=dim(X.add.s)[length(dim(X.add.s))]
-par(mfrow=c(1,n.add.preds_s))
-for(i in 1:n.add.preds_s){
-  plt.x=seq(from=min(knots.s[i,]),to=max(knots.s[i,]),length=1000)  #Create sequence for x-axis
+# Spread predictors
+n.A.preds_s=dim(X_A.s)[length(dim(X_A.s))]
+par(mfrow=c(1,n.A.preds_s))
+for(i in 1:n.A.preds_s){
+  plt.x=seq(from=min(knots.s[i,]),to=max(knots.s[i,]),length=1000)  # Create sequence for x-axis
 
   tmp=matrix(nrow=length(plt.x),ncol=n.knot.s)
   for(j in 1:n.knot.s){
-    tmp[,j]=rad(plt.x,knots.s[i,j]) #Evaluate radial basis function of plt.x and all knots
+    tmp[,j]=rad(plt.x,knots.s[i,j]) # Evaluate radial basis function of plt.x and all knots
   }
   plt.y=tmp\%*\%out$gam.weights_s[i,]
-  plot(plt.x,plt.y,type="l",main=paste0("s_beta spline: predictor ",i),xlab="x",ylab="f(x)")
+  plot(plt.x,plt.y,type="l",main=paste0("s_beta spline: predictor ",i), xlab="x", ylab="f(x)")
   points(knots.s[i,],rep(mean(plt.y),n.knot.s),col="red",pch=2)
-  #Adds red triangles that denote knot locations
+  # Adds red triangles that denote knot locations
 
 }
 
@@ -329,5 +310,5 @@ for(i in 1:n.add.preds_s){
 Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
 (\href{https://doi.org/10.1002/env.2742}{doi})
 
-Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }

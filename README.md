@@ -30,6 +30,8 @@ For $m_{\mathcal{N}}$, we have:
 * A convolutional neural network (with 3 by 3 filters). This requires that $Y$ is observed on a regular spatial grid.
 * Graph convolutional neural network. Requires that $Y$ is spatial data and accompanies an adjacency matrix describing the graph structure. Currently only implemented for the eGPD and logistic $F$ models.
 
+All neural networks use ReLU activation functions in all hidden layers and the identity in the final layer.
+
 Note that $x_{\mathcal{A}}, x_{\mathcal{L}},$ and $x_{\mathcal{N}}$ can be taken as empty sets; hence, the partially-interpretable aspect of the PINN does not need to be incorporated into the models. Standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y`, the models cannot be readily-applied; in these cases, the data must be scaled or translated.
 
 ## Installation 

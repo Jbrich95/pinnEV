@@ -1,15 +1,15 @@
 #'Australian Wildfire data
 #'
-#'Data used by Cisneros et al. (2023+) for modelling extreme wildfires in Australia
+#'Data used by Cisneros et al. (2024) for modelling extreme wildfires in Australia
 #'with eGPD graph convolutional neural networks
 #'
 #'The response data \code{BA} are observations of monthly aggregated burnt area (km^2) over 7901 artificially constructed spatial polygons 
 #'that discretise Australia and Tasmania. These polygons were constructed using Statistical Area level-1 and level-2 (SA1/SA2) census regions (ABS, 2011) to ensure that the polygons have comparable population density.
 #'The observation period covers June 1999 to December 2018, inclusive, leaving 235 observed spatial fields. Observations are derived from historical reported bushfire boundaries (Lizundia-Loiola et al., 2020). 
-#'Alongside monthly values of BA, we provide the area of each polygon; this is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2023), 
+#'Alongside monthly values of BA, we provide the area of each polygon; this is given in \code{a.s}, which is equivalent to \eqn{a(s)} in Cisneros et al. (2024), 
 #'and can be specified as an offset term in [pinnEV::eGPD.NN]. The boundaries of the polygons are provided separately, see \code{help("AusWild_geom")}.
 #'
-#'Values of \code{BA} are missing in the Northern territories and have been set to \code{-1e10}; this leaves 7590 polygons with observed \code{BA >= 0}. Stored in \code{X} are the thirteen model predictors used by Cisneros et al. (2023).
+#'Values of \code{BA} are missing in the Northern territories and have been set to \code{-1e10}; this leaves 7590 polygons with observed \code{BA >= 0}. Stored in \code{X} are the thirteen model predictors used by Cisneros et al. (2024).
 #'For \code{BA} and entries to \code{X}, the first two dimensions correspond to time \eqn{\times} location with 
 #'their respective ordinate values given in \code{times} and \code{coords}; \code{coords} is a 7901 by 2 matrix correspond to the longitude and latitude coordinates of the centroid of each polygon.
 #'
@@ -26,7 +26,7 @@
 #'Shuttle Radar Topography Mission digital elevation model (Farr et al., 2000). Note that whilst these variables are static, 
 #'we have stacked them into an array to have the same dimension as \code{X.met} and \code{X.NDVI}.
 #'
-#'See Cisneros et al. (2023+) for details on the construction of this dataset. Note that the example code describes the fitting of the eGPD-GCNN model used by these authors. This model exploits
+#'See Cisneros et al. (2024) for details on the construction of this dataset. Note that the example code describes the fitting of the eGPD-GCNN model used by these authors. This model exploits
 #'the graph convolutional neural network (GCNN) of Kipf and Welling (2016), with trainable skip connection (see GCSConv layer of \href{https://graphneural.network/layers/convolution/}{https://graphneural.network/layers/convolution/}).
 #' @docType data
 #'
@@ -61,9 +61,9 @@
 #' 
 #' Kipf, T. N. and Welling, M. (2016). \emph{Semi-supervised classification with graph convolutional networks}. (\href{https://arxiv.org/abs/1412.6980}{arXiv:1412.6980}).
 #' 
-#' Muñoz-Sabater, J. (2019).\emph{ERA5-land monthly averaged data from 1981 to present, Copernicus climate change service (C3S) climate data store (CDS).} Earth Syst. Sci. Data, 55:5679–5695. (\href{https://doi.org/10.24381/cds.e2161bac}{doi}).
+#' Muñoz-Sabater, J. (2019). \emph{ERA5-land monthly averaged data from 1981 to present, Copernicus climate change service (C3S) climate data store (CDS).} Earth Syst. Sci. Data, 55:5679–5695. (\href{https://doi.org/10.24381/cds.e2161bac}{doi}).
 #'
-#' Cisneros, D., Richards, J., Dahal, A., Lombardo, L., and Huser, R. (2023+), \emph{Deep learning-based graphical regression for jointly moderate and extreme Australian wildfires.}. (\href{}{In draft}).
+#' Cisneros, D., Richards, J., Dahal, A., Lombardo, L., and Huser, R. (2024), \emph{Deep learning-based graphical regression for jointly moderate and extreme Australian wildfires.} Spatial Statistics, 53:100811. (\href{https://doi.org/10.1016/j.spasta.2024.100811}{doi}).
 # '
 #' @examples
 #' data("AusWild")

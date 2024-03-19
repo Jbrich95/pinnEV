@@ -58,7 +58,7 @@
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
-#'A non-interpretable version of this model was exploited by Cisneros et al. (2023). Equivalence with their model is achieved by setting \code{X.k=NULL}, \code{X.lin.s=NULL}, \code{X.add.basis.s=NULL} and \code{type="GCNN"}. See \code{help(AusWild)}.
+#'A non-interpretable version of this model was exploited by Cisneros et al. (2024). Equivalence with their model is achieved by setting \code{X.k=NULL}, \code{X.lin.s=NULL}, \code{X.add.basis.s=NULL} and \code{type="GCNN"}. See \code{help(AusWild)}.
 #'
 #'}
 #' @return \code{eGPD.NN.train} returns the fitted \code{model}.  \code{eGPD.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted parameter estimates, and, if applicable, their corresponding linear regression coefficients and spline bases weights.
@@ -70,9 +70,9 @@
 #' Naveau, P., Huser, R., Ribereau, P., and Hannart, A. (2016), \emph{Modeling jointly low, moderate, and heavy rainfall intensities without a threshold selection}, Water Resources Research, 2(4):2753–2769.
 #' (\href{https://doi.org/10.1002/2015WR018552}{doi})
 #'
-#' Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#' Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #' 
-#' Cisneros, D., Richards, J., Dahal, A., Lombardo, L., and Huser, R. (2023), \emph{Deep learning-based graphical regression for jointly moderate and extreme Australian wildfires.}. (\href{}{In draft}).
+#' Cisneros, D., Richards, J., Dahal, A., Lombardo, L., and Huser, R. (2024), \emph{Deep learning-based graphical regression for jointly moderate and extreme Australian wildfires.} Spatial Statistics, 53:100811. (\href{https://doi.org/10.1016/j.spasta.2024.100811}{doi}).
 #'}
 #' @examples
 # Build and train a simple MLP for toy data

@@ -1,6 +1,6 @@
 #' US Wildfires data
 #'
-#'Data used by Richards and Huser (2022) for modelling extreme wildfires in the contiguous U.S.
+#'Data used by Richards and Huser (2024+) for modelling extreme wildfires in the contiguous U.S.
 #'with partially-interpretable neural networks
 #'
 #'The response data \code{BA} are observations of monthly aggregated burnt area (acres) of 3503 spatial grid-cells 

@@ -234,7 +234,7 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
   if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & !is.null(X.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
-  reticulate::use_virtualenv("myenv", required = T)
+  reticulate::use_virtualenv("pinnEV_env", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
   if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)

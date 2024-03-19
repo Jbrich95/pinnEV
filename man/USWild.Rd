@@ -28,7 +28,7 @@ A list with 7 elements:
 data(USWild)
 }
 \description{
-Data used by Richards and Huser (2022) for modelling extreme wildfires in the contiguous U.S.
+Data used by Richards and Huser (2024+) for modelling extreme wildfires in the contiguous U.S.
 with partially-interpretable neural networks
 }
 \details{
