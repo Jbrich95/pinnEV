@@ -1,13 +1,11 @@
 #  Partially-Interpretable Neural Networks for modelling Extreme Values
 Methodology for fitting marginal extreme value (and associated) models using partially-interpretable neural networks (PINNs). Networks are trained using the [R interface to Keras](https://cloud.r-project.org/web/packages/keras/index.html) with custom loss functions taken to be penalised versions of the negative log-likelihood for associated models. For full details on the partially-interpretable deep-learning framework for extreme value analysis, see  Richards, J. and Huser, R., Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks</i> (2024+).
 
-Models are defined for response $Y$ and covariates $\bf X$, where $Y$ can be an array of 1 to 3 dimensions and $\bf X$ has one extra dimension (corresponding to values of different predictors). All models are of the form $Y | \mathbf{X} \sim F(\boldsymbol{\theta}(\mathbf{x}))$, where $F$ is some statistical distribution model and the parameter set $\boldsymbol{\theta}(\mathbf{x})$ is modelled using a partially-interpretable neural network. The parameter set varies in length (denoted by $p$), depending on the choice of $F$, and each component $\theta_i(\mathbf{x}), i=1,\dots,p,$ is modelled using a PINN; this has the form
-$$\theta_i(\mathbf{x})=h_i [ \eta_0^{(i)} +m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}  )],$$ 
-where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m^{(i)}_\mathcal{I}$ is a semi-parametric function, and $m^{(i)_\mathcal{N}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_\mathcal{I}$ into a linear function and a thin-plate spline:
-$$
-m_\mathcal{I}^(i)(\mathbf{x}_\mathcal{I}^{(i)})=m_\mathcal{A}^(i)(\mathbf{x}_\mathcal{A}^{(i)})+m_\mathcal{L}^(i)(\mathbf{x}_\mathcal{L}^{(i)}),
-$$
-where $\mathbf{x}^{(i)}_\mathcal{I}$ and $\mathbf{x}^{(i)}_\mathcal{I}$ are complementary subsets of $\mathbf{x}^{(i)}_\mathcal{I}$. We model $m_\mathcal{A}$ using thin-plate splines and $m_\mathcal{L}$ as linear.
+Models are defined for response $Y$ and covariates $X$, where $Y$ can be an array of 1 to 3 dimensions and $\bf X$ has one extra dimension (corresponding to values of different predictors). All models are of the form $Y | \mathbf{X} \sim F(\boldsymbol{\theta}(x))$, where $F$ is some statistical distribution model and the parameter set $\boldsymbol{\theta}(x)$ is modelled using a partially-interpretable neural network. The parameter set varies in length (denoted by $p$), depending on the choice of $F$, and each component $\theta_i(x), i=1,\dots,p,$ is modelled using a PINN; this has the form
+$$\theta_i(x)=h_i [ \eta_0^{(i)} +m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})  +m_{\mathcal{N}}^{(i)}(x_{\mathcal{N}}^{(i)})  ],$$ 
+where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m^{(i)}_{\mathcal{I}}$ is a semi-parametric (interpretable) function, and $m^{(i)}_{\mathcal{N}}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_{\mathcal{I}}$ into an additive and a linear function, i.e., 
+$$m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})=m_{\mathcal{A}}^{(i)}(x_{\mathcal{A}}^{(i)})+m_{\mathcal{L}}^{(i)}(x_{\mathcal{L}}^{(i)})$$
+where $x^{(i)}_{\mathcal{A}}$ and $x^{(i)}_{\mathcal{L}}$ are complementary subsets of $x^{(i)}_{\mathcal{I}}$. We model $m_{\mathcal{A}}$ using thin-plate splines and $m_{\mathcal{L}}$ as linear.
 
 
 
@@ -26,13 +24,13 @@ For the statistical distribution $F$, we have implemented:
 
 ## Implemented neural networks
 
-For $m_\mathcal{N}$, we have:
+For $m_{\mathcal{N}}$, we have:
 
 * A densely-connected neural network or multi-layered perceptron;
 * A convolutional neural network. This requires that $Y$ is observed on a regular spatial grid.
 * Graph convolutional neural network. Requires that $Y$ is spatial data and accompanies an adjacency matrix describing the graph structure.
 
-Note that $\mathbf{x}_\mathcal{A}, \mathbf{x}_\mathcal{L},$ and $\mathcal{x}_\mathcal{N}$ can be taken as empty; hence, the partially-interpretable aspect of the PINN does not need to be incorporated into the models. Standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y`, the models cannot be readily-applied; in these cases, the data must be scaled or translated.
+Note that $x_{\mathcal{A}}, x_{\mathcal{L}},$ and $x_{\mathcal{N}}$ can be taken as empty sets; hence, the partially-interpretable aspect of the PINN does not need to be incorporated into the models. Standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y`, the models cannot be readily-applied; in these cases, the data must be scaled or translated.
 
 ## Installation 
 
