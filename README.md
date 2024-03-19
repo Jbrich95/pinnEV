@@ -3,9 +3,9 @@ Methodology for fitting marginal extreme value (and associated) models using par
 
 Models are defined for response $Y$ and covariates $X$, where $Y$ can be an array of 1 to 3 dimensions and $\bf X$ has one extra dimension (corresponding to values of different predictors). All models are of the form $Y | \mathbf{X} \sim F(\boldsymbol{\theta}(x))$, where $F$ is some statistical distribution model and the parameter set $\boldsymbol{\theta}(x)$ is modelled using a partially-interpretable neural network. The parameter set varies in length (denoted by $p$), depending on the choice of $F$, and each component $\theta_i(x), i=1,\dots,p,$ is modelled using a PINN; this has the form
 $$\theta_i(x)=h_i [ \eta_0^{(i)} +m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})  +m_{\mathcal{N}}^{(i)}(x_{\mathcal{N}}^{(i)})  ],$$ 
-where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m_{\mathcal{I}}^{(i)}$ is a semi-parametric (interpretable) function, and $m_{\mathcal{N}}^{(i)}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_{\mathcal{I}}$ into an additive and a linear function, i.e., 
+where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m_{\mathcal{I}}^{(i)}$ is a semi-parametric (interpretable) function, and $m_{\mathcal{N}}^{(i)}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_{\mathcal{I}}^{(i)}$ into an additive and a linear function, i.e., 
 $$m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})=m_{\mathcal{A}}^{(i)}(x_{\mathcal{A}}^{(i)})+m_{\mathcal{L}}^{(i)}(x_{\mathcal{L}}^{(i)})$$
-where $x^{(i)}_{\mathcal{A}}$ and $x^{(i)}_{\mathcal{L}}$ are complementary subsets of $x^{(i)}_{\mathcal{I}}$. We model $m_{\mathcal{A}}$ using thin-plate splines and $m_{\mathcal{L}}$ as linear.
+where $x_{\mathcal{A}}^{(i)}$ and $x_{\mathcal{L}}^{(i)}$ are complementary subsets of $x_{\mathcal{I}}^{(i)}$. We model $m_{\mathcal{A}}$ using thin-plate splines and $m_{\mathcal{L}}$ as linear.
 
 
 
