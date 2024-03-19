@@ -20,15 +20,15 @@ For the statistical distribution $F$, we have implemented:
 * Extended GPD (eGPD; with offset scale) - see Cisneros, D., et al., (2024) [doi:10.1016/j.spasta.2024.100811](https://doi.org/10.1016/j.spasta.2024.100811);
 * Bernoulli/logistic;
 * Log-normal;
-* Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143). Note that in this case $F$ is arbritary, and $\theta(x)$ is taken to be the conditional $\tau$ quantile for $\tau\in(0,1)$ (with $p=1$).
+* Non-parametric single quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143). Note that in this case $F$ is arbritary, and $\theta(x)$ is taken to be the conditional $\tau$ quantile for $\tau\in(0,1)$ (with $p=1$).
 
 ## Implemented neural networks
 
 For $m_{\mathcal{N}}$, we have:
 
 * A densely-connected neural network or multi-layered perceptron;
-* A convolutional neural network. This requires that $Y$ is observed on a regular spatial grid.
-* Graph convolutional neural network. Requires that $Y$ is spatial data and accompanies an adjacency matrix describing the graph structure.
+* A convolutional neural network (with 3 by 3 filters). This requires that $Y$ is observed on a regular spatial grid.
+* Graph convolutional neural network. Requires that $Y$ is spatial data and accompanies an adjacency matrix describing the graph structure. Currently only implemented for the eGPD and logistic $F$ models.
 
 Note that $x_{\mathcal{A}}, x_{\mathcal{L}},$ and $x_{\mathcal{N}}$ can be taken as empty sets; hence, the partially-interpretable aspect of the PINN does not need to be incorporated into the models. Standard conditional density estimation neural networks can be implemented through function arguments. Missing values in the response variable `Y` are handled by setting said values to `-1e10`. For data where `-1e10` is within the range of reasonable values of `Y`, the models cannot be readily-applied; in these cases, the data must be scaled or translated.
 

@@ -385,7 +385,7 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NUL
   if(type=="MLP"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   if(type=="GCNN"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
   
-  reticulate::use_virtualenv("myenv", required = T)
+  reticulate::use_virtualenv("pinnEV_env", required = T)
   if(is.null(seed)) seed=1
   tf$random$set_seed(seed)
   
@@ -514,7 +514,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
   if(type=="GCNN"){
   spk <<- reticulate::import("spektral", delay_load = list(
     priority = 10,
-    environment = "myenv"
+    environment = "pinnEV_env"
   ))
   
   

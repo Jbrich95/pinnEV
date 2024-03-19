@@ -67,7 +67,7 @@
 #' Castro-Camilo, D., Huser, R., and Rue, H. (2021), \emph{Practical strategies for generalized extreme value-based regression models for extremes}, Environmetrics, e274.
 #' (\href{https://doi.org/10.1002/env.2742}{doi})
 #'
-#' Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#' Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
 #' @examples
 #'
@@ -365,7 +365,7 @@ bGEVPP.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, u = NULL, type="MLP",l
   if(type=="CNN" & (!is.null(X.nn.q) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.q) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
-  reticulate::use_virtualenv("myenv", required = T)
+  reticulate::use_virtualenv("pinnEV_env", required = T)
 
   if(!is.null(seed)) tf$random$set_seed(seed)
 

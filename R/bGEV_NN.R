@@ -348,7 +348,7 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, type="MLP",link.loc="ide
   if(type=="CNN" & (!is.null(X.nn.q) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.q) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   
-  reticulate::use_virtualenv("myenv", required = T)
+  reticulate::use_virtualenv("pinnEV_env", required = T)
   
   if(!is.null(seed)) tf$random$set_seed(seed)
   

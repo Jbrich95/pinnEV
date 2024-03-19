@@ -217,7 +217,7 @@ logistic.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP", A=NULL,
   if(type=="GCNN"  & (!is.null(X.nn) ) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
   
   print(paste0("Training for ", n.ep," epochs with a batch size of ", batch.size))
-  reticulate::use_virtualenv("myenv", required = T)
+  reticulate::use_virtualenv("pinnEV_env", required = T)
 
   if(is.null(seed)) seed=1
   tf$random$set_seed(seed)
@@ -305,7 +305,7 @@ logistic.NN.build=function(X.nn,X.lin,X.add.basis, type, init.p, widths, filter.
   if(type=="GCNN"){
     spk <<- reticulate::import("spektral", delay_load = list(
       priority = 10,
-      environment = "myenv"
+      environment = "pinnEV_env"
     ))
     
     
