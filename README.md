@@ -3,7 +3,7 @@ Methodology for fitting marginal extreme value (and associated) models using par
 
 Models are defined for response $Y$ and covariates $X$, where $Y$ can be an array of 1 to 3 dimensions and $\bf X$ has one extra dimension (corresponding to values of different predictors). All models are of the form $Y | \mathbf{X} \sim F(\boldsymbol{\theta}(x))$, where $F$ is some statistical distribution model and the parameter set $\boldsymbol{\theta}(x)$ is modelled using a partially-interpretable neural network. The parameter set varies in length (denoted by $p$), depending on the choice of $F$, and each component $\theta_i(x), i=1,\dots,p,$ is modelled using a PINN; this has the form
 $$\theta_i(x)=h_i [ \eta_0^{(i)} +m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})  +m_{\mathcal{N}}^{(i)}(x_{\mathcal{N}}^{(i)})  ],$$ 
-where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m^{(i)}_{\mathcal{I}}$ is a semi-parametric (interpretable) function, and $m^{(i)}_{\mathcal{N}}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_{\mathcal{I}}$ into an additive and a linear function, i.e., 
+where $\eta_0^{(i)}$ is a constant real intercept, $h_i$ is some link function, $m_{\mathcal{I}}^{(i)}$ is a semi-parametric (interpretable) function, and $m_{\mathcal{N}}^{(i)}$ is a neural network. Note that these three functions, and their inputs, differ across $i=1,\dots,p$. We further split up $m_{\mathcal{I}}$ into an additive and a linear function, i.e., 
 $$m_{\mathcal{I}}^{(i)}(x_{\mathcal{I}}^{(i)})=m_{\mathcal{A}}^{(i)}(x_{\mathcal{A}}^{(i)})+m_{\mathcal{L}}^{(i)}(x_{\mathcal{L}}^{(i)})$$
 where $x^{(i)}_{\mathcal{A}}$ and $x^{(i)}_{\mathcal{L}}$ are complementary subsets of $x^{(i)}_{\mathcal{I}}$. We model $m_{\mathcal{A}}$ using thin-plate splines and $m_{\mathcal{L}}$ as linear.
 
@@ -20,7 +20,7 @@ For the statistical distribution $F$, we have implemented:
 * Extended GPD (eGPD; with offset scale) - see Cisneros, D., et al., (2024) [doi:10.1016/j.spasta.2024.100811](https://doi.org/10.1016/j.spasta.2024.100811);
 * Bernoulli/logistic;
 * Log-normal;
-* Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143). Note that in this case $F$ is arbritary, and $\theta(\mathbf{x})$ is taken to be the conditional $\tau$ quantile for $\tau\in(0,1)$.
+* Non-parametric quantile estimation - see Koenker, R. (2005) [doi:10.1257/jep.15.4.143](https://doi.org/10.1257/jep.15.4.143). Note that in this case $F$ is arbritary, and $\theta(x)$ is taken to be the conditional $\tau$ quantile for $\tau\in(0,1)$ (with $p=1$).
 
 ## Implemented neural networks
 
@@ -57,7 +57,7 @@ keras::install_keras(method = c("virtualenv"), envname = "pinnEV_env",version=tf
 keras::is_keras_available() #Check if keras is available
 
 
-#Install spektral 1.3.0 - this is for the graph convolutional neural networks
+#Install spektral 1.3.0 - this is for the graph convolutional neural networks. Remove all code hereafter if not necessary.
 reticulate::virtualenv_install("pinnEV_env",
                                packages = "spektral", version="1.3.0")
 
