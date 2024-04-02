@@ -4,7 +4,7 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
+#'  the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -31,11 +31,9 @@
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial location, spread and shape estimates are \code{init.loc, init.spread} and \code{init.xi}, respectively,  across all dimensions.
 #' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}. 
 
 #'@name bGEV.NN
 
@@ -53,7 +51,7 @@
 #'
 #' For details of the bGEV distribution, see \code{help(pbGEV)}. 
 #'
-#' The model is fitted by minimising the negative log-likelihood associated with the bGEV model plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+#' The model is fitted by minimising the negative log-likelihood associated with the bGEV model; training is performed over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
@@ -172,19 +170,6 @@
 #'     #Evaluate rad at all entries to X.add.q and for all knots
 #'   }}
 #'   
-#'   #'#Create smoothing penalty matrix for the two q_alpha additive functions
-#' 
-#'# Set smoothness parameters for two functions
-#'  lambda = c(0.1,0.2) 
-#'
-#' S_lambda.q=matrix(0,nrow=n.knot.q*dim(X.add.q)[4],ncol=n.knot.q*dim(X.add.q)[4])
-#'for(i in 1:dim(X.add.q)[4]){
-#'  for(j in 1:n.knot.q){
-#'   for(k in 1:n.knot.q){
-#'      S_lambda.q[(j+(i-1)*n.knot.q),(k+(i-1)*n.knot.q)]=lambda[i]*rad(knots.q[i,j],knots.q[i,k])
-#'   }
-#' }
-#'}
 #'
 #' #Get knots for s_\beta predictor
 #' knots.s=matrix(nrow=dim(X.add.s)[4],ncol=n.knot.s)
@@ -200,22 +185,6 @@
 #'     #Evaluate rad at all entries to X.add.q and for all knots
 #'   }}
 #'
-#'#Create smoothing penalty matrix for the s_beta additive function
-#' 
-#'# Set smoothness parameter
-#'  lambda = c(0.2) 
-#'
-#' S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.add.s)[4],ncol=n.knot.s*dim(X.add.s)[4])
-#'for(i in 1:dim(X.add.s)[4]){
-#'  for(j in 1:n.knot.s){
-#'   for(k in 1:n.knot.s){
-#'      S_lambda.s[(j+(i-1)*n.knot.s),(k+(i-1)*n.knot.s)]=lambda[i]*rad(knots.s[i,j],knots.s[i,k])
-#'   }
-#' }
-#'}
-#'  
-#'#Join in one list
-#'S_lambda =list("S_lambda.q"=S_lambda.q, "S_lambda.s"=S_lambda.s)
 #'
 #'
 #' #lin+GAM+NN models defined for both location and scale parameters
@@ -228,7 +197,7 @@
 #' #Fit the bGEV model. Note that training is not run to completion.
 #' NN.fit<-bGEV.NN.train(Y.train, Y.valid,X.q,X.s, type="MLP",link.loc="identity",
 #'                        n.ep=500, batch.size=50,init.loc=2, init.spread=5,init.xi=0.1,
-#'                        widths=c(6,3),seed=1,S_lambda=S_lambda)
+#'                        widths=c(6,3),seed=1)
 #' out<-bGEV.NN.predict(X.q=X.q,X.s=X.s,NN.fit$model)
 #'
 #' print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
@@ -243,8 +212,8 @@
 #' #To load model, run
 #' # model  <- load_model_tf("model_bGEV",
 #' #  custom_objects=list(
-#' #    "bgev_loss_alpha__beta__p_a__p_b__c1__c2__S_lambda___S_lambda_"=
-#' #        bgev_loss(S_lambda=S_lambda))
+#' #    "bgev_loss_alpha__beta__p_a__p_b__c1__c2_"=
+#' #        bgev_loss())
 #' #        )
 #'
 #' #Note that bGEV_loss() can take custom alpha,beta, p_a and p_b arguments if defaults not used
@@ -292,8 +261,8 @@
 
 bGEV.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, type="MLP",link.loc="identity",
                          n.ep=100, batch.size=100,init.loc=NULL, init.spread=NULL,init.xi=NULL,
-                         widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
-                         alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL)
+                         widths=c(6,3),seed=NULL,init.wb_path=NULL,
+                         alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5)
 {
   
   
@@ -322,9 +291,6 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, type="MLP",link.loc="ide
   if(!is.null(X.nn.q) & is.null(X.add.basis.q) & is.null(X.lin.q) )   {train.data= list(X.nn.q); print("Defining fully-NN model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.nn.q),Y.valid)}
   if(is.null(X.nn.q) & is.null(X.add.basis.q) & is.null(X.lin.q) )   {train.data= list(); print("Defining stationary model for q_\alpha" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   
-  S_lambda.q=S_lambda$S_lambda.q
-  if(!is.null(X.add.basis.q) & is.null(S_lambda.q)){print("No smoothing penalty used for q_\alpha")}
-  if(is.null(X.add.basis.q)){S_lambda.q=NULL}
   
   X.nn.s=X.s$X.nn.s
   X.lin.s=X.s$X.lin.s
@@ -339,13 +305,9 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, type="MLP",link.loc="ide
   if(!is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= c(train.data,list(X.nn.s)); print("Defining fully-NN model for s_\beta" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.nn.s)),Y.valid)}
   if(is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= train.data; print("Defining stationary model for s_\beta" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
-  S_lambda.s=S_lambda$S_lambda.s
-  if(!is.null(X.add.basis.s) & is.null(S_lambda.s)){print("No smoothing penalty used for s_\beta")}
-  if(is.null(X.add.basis.s)){S_lambda.s=NULL}
+
   
-  S_lambda =list("S_lambda.q"=S_lambda.q, "S_lambda.s"=S_lambda.s)
-  
-  if(type=="CNN" & (!is.null(X.nn.q) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="CNN" & (!is.null(X.nn.q) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", 3," by ", 3," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.q) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   
   reticulate::use_virtualenv("pinnEV_env", required = T)
@@ -354,13 +316,13 @@ bGEV.NN.train=function(Y.train, Y.valid = NULL,X.q,X.s, type="MLP",link.loc="ide
   
   model<-bGEV.NN.build(X.nn.q,X.lin.q,X.add.basis.q,
                          X.nn.s,X.lin.s,X.add.basis.s,
-                        type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b, c1, c2)
+                        type, init.loc,init.spread,init.xi, widths,link.loc,alpha,beta,p_a,p_b, c1, c2)
  
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
  
   model %>% compile(
     optimizer="adam",
-    loss = bgev_loss(alpha,beta,p_a,p_b,c1,c2,S_lambda=S_lambda),
+    loss = bgev_loss(alpha,beta,p_a,p_b,c1,c2),
     run_eagerly=T
   )
 
@@ -458,7 +420,7 @@ bGEV.NN.predict=function(X.q,X.s, model)
 #'
 bGEV.NN.build=function(X.nn.q,X.lin.q,X.add.basis.q,
                        X.nn.s,X.lin.s,X.add.basis.s,
-                       type, init.loc,init.spread,init.xi, widths,filter.dim,link.loc,alpha,beta,p_a,p_b,c1,c2)
+                       type, init.loc,init.spread,init.xi, widths,link.loc,alpha,beta,p_a,p_b,c1,c2)
 {
   #Additive inputs
   if(!is.null(X.add.basis.q))  input_add_q<- layer_input(shape = dim(X.add.basis.q)[-1], name = 'add_input_q')
@@ -523,7 +485,7 @@ bGEV.NN.build=function(X.nn.q,X.lin.q,X.add.basis.q,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.q)[-1], name = paste0('nn_q_cnn',i) )
       }
       
@@ -547,7 +509,7 @@ bGEV.NN.build=function(X.nn.q,X.lin.q,X.add.basis.q,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_cnn',i) )
       }
       
@@ -811,11 +773,8 @@ lambda=function(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,exceedInds){
     out*exceedInds
   )
 }
-bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL){
-  
-  S_lambda.q=S_lambda$S_lambda.q;   S_lambda.s=S_lambda$S_lambda.s
-  
-  if(is.null(S_lambda.q) & is.null(S_lambda.s)){
+bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5){
+ 
     loss<- function( y_true, y_pred) {
       
       library(tensorflow)
@@ -849,137 +808,7 @@ bgev_loss <-function(alpha=0.5,beta=0.5,p_a=0.05,p_b=0.2,c1=5,c2=5,S_lambda=NULL
               -K$sum(l2) 
       )
     }
-  }else if(!is.null(S_lambda.q) & !is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      q_a=y_pred[all_dims(),1]
-      s_b=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      
-      y <- y_true
-      
-      t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
-      gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
-      S_lambda.q.tensor=K$constant(S_lambda.q)
-      
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.s.tensor=K$constant(S_lambda.s)
-      
-      penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
-      
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      
-      
-      a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
-      b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
-      b =b + (1-obsInds)
-      s_b=s_b+(1-obsInds)
-      
-      
-      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
-      
-      l2=K$log(l2+(1-obsInds))*obsInds
-      
-      return( penalty-K$sum(l1)
-              -K$sum(l2) 
-      )
-    }
-  }else if(is.null(S_lambda.q) & !is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      q_a=y_pred[all_dims(),1]
-      s_b=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      
-      y <- y_true
-      
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.s.tensor=K$constant(S_lambda.s)
-      
-      penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
-      
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      
-      
-      a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
-      b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
-      b =b + (1-obsInds)
-      s_b=s_b+(1-obsInds)
-      
-      
-      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEV_NN.R, but with exceedInds=obsInds
-      
-      l2=K$log(l2+(1-obsInds))*obsInds
-      
-      return( penalty-K$sum(l1)
-              -K$sum(l2) 
-      )
-    }
-  }else if(!is.null(S_lambda.q) & is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      q_a=y_pred[all_dims(),1]
-      s_b=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      
-      y <- y_true
-      
-      t.gam.weights.q=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
-      gam.weights.q=K$constant(model$get_layer("add_q")$get_weights()[[1]])
-      S_lambda.q.tensor=K$constant(S_lambda.q)
-      
-      
-      penalty = 0.5*K$dot(t.gam.weights.q,K$dot(S_lambda.q.tensor,gam.weights.q))
-      
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      
-      
-      a=Finverse(p_a,q_a,s_b,xi,alpha,beta)
-      b=Finverse(p_b,q_a,s_b,xi,alpha,beta)
-      b =b + (1-obsInds)
-      s_b=s_b+(1-obsInds)
-      
-      
-      l1=logH(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds)
-      l2=lambda(y,q_a,s_b,xi,alpha,beta,a,b,p_a,p_b,c1,c2,obsInds,obsInds) #use lambda functiom from bGEVPP_NN.R, but with exceedInds=obsInds
-      
-      l2=K$log(l2+(1-obsInds))*obsInds
-      
-      return( penalty-K$sum(l1)
-              -K$sum(l2) 
-      )
-    }
-  }
+
+
   return(loss)
 }

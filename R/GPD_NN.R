@@ -4,7 +4,7 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
+#'  the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -32,10 +32,8 @@
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial scale and shape estimates are \code{ init.scale} and \code{init.xi}, respectively,  across all dimensions.
 #' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{GPD.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\log(\sigma_u)} (or \eqn{\log(\sigma)}); only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
 
 #'@name GPD.NN
 
@@ -163,20 +161,6 @@
 #'     #Evaluate rad at all entries to X.add and for all knots
 #'   }}
 #' 
-#' #Create smoothing penalty matrix for the two sigma additive functions
-#'
-#' # Set smoothness parameters for the two functions
-#' lambda = c(0.1,0.2) 
-#'
-#' S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
-#'for(i in 1:dim(X.add)[4]){
-#'  for(j in 1:n.knot){
-#'   for(k in 1:n.knot){
-#'      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
-#'   }
-#' }
-#'}
-#' 
 #' #lin+GAM+NN models defined for scale parameter
 #' X=list("X.nn"=X.nn, "X.lin"=X.lin,
 #'              "X.add.basis"=X.add.basis) 
@@ -186,7 +170,7 @@
 #' #Fit the GPD model for exceedances above u. Note that training is not run to completion.
 #' NN.fit<-GPD.NN.train(Y.train, Y.valid,X, u, type="MLP", re.par=F,
 #'                     n.ep=500, batch.size=50,init.scale=1, init.xi=0.1,
-#'                     widths=c(6,3),seed=1,S_lambda=S_lambda)
+#'                     widths=c(6,3),seed=1)
 #' out<-GPD.NN.predict(X=X,u=u,model=NN.fit$model)
 #' hist(out$pred.sigma) #Plot histogram of predicted sigma
 #' print("sigma linear coefficients: "); print(round(out$lin.coeff_sigma,2))
@@ -196,7 +180,7 @@
 #' #To load model, run
 #' #model  <- load_model_tf("model_GPD",
 #' #custom_objects=list(
-#' #"GPD_loss_S_lambda___S_lambda__re_par___re_par_"=GPD_loss(S_lambda=S_lambda,re.par=F))
+#' #"GPD_loss_re_par___re_par_"=GPD_loss(re.par=F))
 #' #)
 #' 
 #' 
@@ -224,7 +208,8 @@
 
 
 GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NULL,re.par=F,
-                      n.ep=100, batch.size=100,init.scale=NULL,init.xi=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
+                      n.ep=100, batch.size=100,init.scale=NULL,init.xi=NULL, widths=c(6,3),seed=NULL,
+                      init.wb_path=NULL)
 {
   
   
@@ -287,13 +272,11 @@ GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NU
       if(is.null(X.nn) & !is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.add.basis,u); print("Defining fully-additive model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_sigma=X.add.basis,u_input=u),Y.valid)}
       if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,u); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_sigma=X.nn,u_input=u),Y.valid)}
     }
-    
-    
   }
-  if(is.null(S_lambda) & !is.null(X.add.basis)){print("No smoothing penalty used")}
-  if(is.null(X.add.basis)){S_lambda=NULL}
+    
+
   
-  if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", 3," by ", 3," filter" ))
   if(type=="MLP"  & !is.null(X.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   
   reticulate::use_virtualenv("pinnEV_env", required = T)
@@ -304,12 +287,12 @@ GPD.NN.train=function(Y.train, Y.valid = NULL,X,u = NULL,   type="MLP",offset=NU
   if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
   
   model<-GPD.NN.build(X.nn,X.lin,X.add.basis,
-                      u,offset,type,init.scale,init.xi, widths,filter.dim)
+                      u,offset,type,init.scale,init.xi, widths)
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
     optimizer="adam",
-    loss = GPD_loss(S_lambda=S_lambda,re.par=re.par),
+    loss = GPD_loss(re.par=re.par),
     run_eagerly=T
   )
   
@@ -402,7 +385,7 @@ GPD.NN.predict=function(X,u, model,offset=NULL)
 #'
 GPD.NN.build=function(X.nn,X.lin,X.add.basis,
                       u,offset,
-                      type,init.scale,init.xi, widths,filter.dim)
+                      type,init.scale,init.xi, widths)
 {
   
   if(!is.null(offset) & any(offset <= 0)) stop("Negative or zero offset values provided")
@@ -450,7 +433,7 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchsigma <- nnBranchsigma  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchsigma <- nnBranchsigma  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                           input_shape =dim(X.nn)[-1], name = paste0('nn_sigma_cnn',i) )
       }
       
@@ -534,9 +517,8 @@ GPD.NN.build=function(X.nn,X.lin,X.add.basis,
 }
 
 
-GPD_loss <- function(S_lambda=NULL,re.par=F){
-  
-  if(is.null(S_lambda)){
+GPD_loss <- function(re.par=F){
+
     loss<-function( y_true, y_pred) {
       
       K <- backend()
@@ -564,41 +546,6 @@ GPD_loss <- function(S_lambda=NULL,re.par=F){
       
       return(-(K$sum(ll1+ll2)))
     }
-  }else{
-    loss<-function( y_true, y_pred) {
-      
-      K <- backend()
-      
-      t.gam.weights=K$constant(t(model$get_layer("add_sigma")$get_weights()[[1]]))
-      gam.weights=K$constant(model$get_layer("add_sigma")$get_weights()[[1]])
-      S_lambda.tensor=K$constant(S_lambda)
-      
-      penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
-      
-      u=y_pred[all_dims(),1]
-      scale=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      y <- y_true
-      y=K$relu(y-u)
-      
-      if(re.par==T){
-        sigu=scale+xi*u
-      }else{
-        sigu=scale
-      }
-      
-      sigu=sigu- sigu*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
-      
-      #Evaluate log-likelihood
-      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sigu)
-      
-      #Uses non-zero response values only
-      ll2= K$log(sigu) *K$sign(ll1)
-      
-      return(penalty-(K$sum(ll1+ll2)))
-      
-      
-    }
-  }
+ 
   return(loss)
 }

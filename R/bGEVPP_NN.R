@@ -210,7 +210,8 @@
 #'   "X_N.s"=X_N.s, "X_L.s"=X_L.s,
 #'   "X_A.basis.s"=X_A.basis.s,
 #'   "X_A.basis.xi"=X_A.basis.s) #Predictors for s_\beta
-#' # Note that we have not defined covariates for xi, so this will be treated as constant with respect to the predictors
+#' # Note that we have not defined covariates for xi, 
+#' # so this will be treated as constant with respect to the predictors
 #' 
 #' 
 #' # We here treat u as fixed and known. In an application, u can be estimated using quant.N.train.

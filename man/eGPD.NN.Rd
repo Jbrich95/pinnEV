@@ -9,8 +9,7 @@
 eGPD.NN.train(Y.train, Y.valid = NULL, X.s, X.k, type = "MLP",
   offset = NULL, A = NULL, n.ep = 100, batch.size = 100,
   init.scale = NULL, init.kappa = NULL, init.xi = NULL, widths = c(6,
-  3), filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
-  S_lambda = NULL)
+  3), seed = NULL, init.wb_path = NULL)
 
 eGPD.NN.predict(X.s, X.k, model, offset = NULL)
 }
@@ -36,7 +35,7 @@ Note that \code{X.s} and \code{X.k} are the predictors for both \code{Y.train} a
 \item{X.k}{similarly to \code{X.s}, but for modelling the shape parameter \eqn{\kappa>0}. Note that we require at least one of \code{!is.null(X.s)} or \code{!is.null(X.k)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).}
+the network will have all convolutional layers (with 3 by 3 filters). If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).}
 
 \item{offset}{an array of strictly positive scalars the same dimension as \code{Y.train}, containing the offset values used in modelling the scale parameter. If \code{offset=NULL}, then no offset is used in the scale parameter (equivalently, \code{offset} is populated with ones). Defaults to \code{NULL}.}
 
@@ -50,15 +49,11 @@ the network will have all convolutional layers. If \code{type=="GCNN"}, then a g
 
 \item{widths}{vector of widths/filters for hidden layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.}
-
 \item{seed}{seed for random initial weights and biases.}
 
 \item{init.wb_path}{filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial scale, kappa and shape estimates are \code{init.scale, init.kappa} and \code{init.xi}, respectively,  across all dimensions.}
-
-\item{S_lambda}{list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.s} and \code{X.add.basis.k} on their respective parameters; each element only used if \code{!is.null(X.add.basis.s)} and \code{!is.null(X.add.basis.k)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{\sigma}; similarly for the second element and \eqn{\kappa}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 }
@@ -84,7 +79,7 @@ Note that \eqn{\xi>0} is fixed across all predictors; this may change in future 
 
 For details of the eGPD distribution, see \code{help(peGPD)}.
 
-The model is fitted by minimising the negative log-likelihood associated with the bGEV model plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+The model is fitted by minimising the negative log-likelihood associated with the bGEV model; training is performed over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -93,6 +88,7 @@ A non-interpretable version of this model was exploited by Cisneros et al. (2024
 }
 }
 \examples{
+# Build and train a simple MLP for toy data
 
 set.seed(1)
 
@@ -203,22 +199,6 @@ for( i in 1:dim(X.add.s)[3]) {
     #Evaluate rad at all entries to X.add.k and for all knots
   }}
 
-
-
-
-#Create smoothing penalty matrix for the sigma additive function
-
-# Set smoothness parameter
-lambda = c(0.2)
-
-S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.add.s)[3],ncol=n.knot.s*dim(X.add.s)[3])
-for(i in 1:dim(X.add.s)[3]){
-  for(j in 1:n.knot.s){
-    for(k in 1:n.knot.s){
-      S_lambda.s[(j+(i-1)*n.knot.s),(k+(i-1)*n.knot.s)]=lambda[i]*rad(knots.s[i,j],knots.s[i,k])
-    }
-  }
-}
 #Get knots for kappa predictors
 knots.k=matrix(nrow=dim(X.add.k)[3],ncol=n.knot.k)
 
@@ -236,23 +216,6 @@ for( i in 1:dim(X.add.k)[3]) {
     #Evaluate rad at all entries to X.add.k and for all knots
   }}
 
-#'#Create smoothing penalty matrix for the two kappa additive functions
-
-# Set smoothness parameters for two functions
-lambda = c(0.1,0.2)
-
-S_lambda.k=matrix(0,nrow=n.knot.k*dim(X.add.k)[3],ncol=n.knot.k*dim(X.add.k)[3])
-for(i in 1:dim(X.add.k)[3]){
-  for(j in 1:n.knot.k){
-    for(k in 1:n.knot.k){
-      S_lambda.k[(j+(i-1)*n.knot.k),(k+(i-1)*n.knot.k)]=lambda[i]*rad(knots.k[i,j],knots.k[i,k])
-    }
-  }
-}
-
-
-#Join in one list
-S_lambda =list("S_lambda.k"=S_lambda.k, "S_lambda.s"=S_lambda.s)
 
 #lin+GAM+NN models defined for both scale and kappa parameters
 X.s=list("X.nn.s"=X.nn.s, "X.lin.s"=X.lin.s,
@@ -264,7 +227,7 @@ X.k=list("X.nn.k"=X.nn.k, "X.lin.k"=X.lin.k,
 #Fit the eGPD model. Note that training is not run to completion.
 NN.fit<-eGPD.NN.train(Y.train, Y.valid,X.s,X.k, type="MLP",
                       n.ep=50, batch.size=50,init.scale=1, init.kappa=1,init.xi=0.1,
-                      widths=c(6,3),seed=1,S_lambda=S_lambda)
+                      widths=c(6,3),seed=1)
 out<-eGPD.NN.predict(X.s=X.s,X.k=X.k,NN.fit$model)
 
 print("sigma linear coefficients: "); print(round(out$lin.coeff_s,2))
@@ -278,8 +241,8 @@ print("kappa linear coefficients: "); print(round(out$lin.coeff_k,2))
 # #To load model, run
 #  model  <- load_model_tf("model_eGPD",
 #   custom_objects=list(
-#     "eGPD_loss_S_lambda___S_lambda_"=
-#       eGPD_loss(S_lambda=S_lambda))
+#     "eGPD_loss__"=
+#       eGPD_loss())
 #         )
 
 

@@ -8,10 +8,9 @@
 \usage{
 bGEV.NN.train(Y.train, Y.valid = NULL, X.q, X.s, type = "MLP",
   link.loc = "identity", n.ep = 100, batch.size = 100, init.loc = NULL,
-  init.spread = NULL, init.xi = NULL, widths = c(6, 3),
-  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL, alpha = 0.5,
-  beta = 0.5, p_a = 0.05, p_b = 0.2, c1 = 5, c2 = 5,
-  S_lambda = NULL)
+  init.spread = NULL, init.xi = NULL, widths = c(6, 3), seed = NULL,
+  init.wb_path = NULL, alpha = 0.5, beta = 0.5, p_a = 0.05,
+  p_b = 0.2, c1 = 5, c2 = 5)
 
 bGEV.NN.predict(X.q, X.s, model)
 }
@@ -37,7 +36,7 @@ Note that \code{X.q} and \code{X.s} are the predictors for both \code{Y.train} a
 \item{X.s}{similarly to \code{X.q}, but for modelling the scale parameter \eqn{s_\beta>0}. Note that we require at least one of \code{!is.null(X.q)} or \code{!is.null(X.s)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
+the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
@@ -47,8 +46,6 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.}
-
 \item{seed}{seed for random initial weights and biases.}
 
 \item{init.wb_path}{filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
@@ -56,8 +53,6 @@ the exact same architecture and trained with the same input data as the new mode
 final layer has zero initial weights to ensure that the initial location, spread and shape estimates are \code{init.loc, init.spread} and \code{init.xi}, respectively,  across all dimensions.}
 
 \item{alpha, beta, p_a, p_b}{hyper-parameters associated with the bGEV distribution. Defaults to those used by Castro-Camilo, D., et al. (2021). Require \code{alpha >= p_b} and \code{beta/2 >= p_b}.}
-
-\item{S_lambda}{list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.q} and \code{X.add.basis.s} on their respective parameters; each element only used if \code{!is.null(X.add.basis.q)} and \code{!is.null(X.add.basis.s)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{q_\alpha}; similarly for the second element and \eqn{s_\beta}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 
@@ -84,7 +79,7 @@ both returned as outputs by \code{bGEV.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_N} ar
 
 For details of the bGEV distribution, see \code{help(pbGEV)}.
 
-The model is fitted by minimising the negative log-likelihood associated with the bGEV model plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+The model is fitted by minimising the negative log-likelihood associated with the bGEV model; training is performed over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -195,19 +190,6 @@ for( i in 1:dim(X.add.q)[4]) {
     #Evaluate rad at all entries to X.add.q and for all knots
   }}
   
-  #'#Create smoothing penalty matrix for the two q_alpha additive functions
-
-# Set smoothness parameters for two functions
- lambda = c(0.1,0.2) 
-
-S_lambda.q=matrix(0,nrow=n.knot.q*dim(X.add.q)[4],ncol=n.knot.q*dim(X.add.q)[4])
-for(i in 1:dim(X.add.q)[4]){
- for(j in 1:n.knot.q){
-  for(k in 1:n.knot.q){
-     S_lambda.q[(j+(i-1)*n.knot.q),(k+(i-1)*n.knot.q)]=lambda[i]*rad(knots.q[i,j],knots.q[i,k])
-  }
-}
-}
 
 #Get knots for s_\beta predictor
 knots.s=matrix(nrow=dim(X.add.s)[4],ncol=n.knot.s)
@@ -223,22 +205,6 @@ for( i in 1:dim(X.add.s)[4]) {
     #Evaluate rad at all entries to X.add.q and for all knots
   }}
 
-#Create smoothing penalty matrix for the s_beta additive function
-
-# Set smoothness parameter
- lambda = c(0.2) 
-
-S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.add.s)[4],ncol=n.knot.s*dim(X.add.s)[4])
-for(i in 1:dim(X.add.s)[4]){
- for(j in 1:n.knot.s){
-  for(k in 1:n.knot.s){
-     S_lambda.s[(j+(i-1)*n.knot.s),(k+(i-1)*n.knot.s)]=lambda[i]*rad(knots.s[i,j],knots.s[i,k])
-  }
-}
-}
- 
-#Join in one list
-S_lambda =list("S_lambda.q"=S_lambda.q, "S_lambda.s"=S_lambda.s)
 
 
 #lin+GAM+NN models defined for both location and scale parameters
@@ -251,7 +217,7 @@ X.s=list("X.nn.s"=X.nn.s, "X.lin.s"=X.lin.s,
 #Fit the bGEV model. Note that training is not run to completion.
 NN.fit<-bGEV.NN.train(Y.train, Y.valid,X.q,X.s, type="MLP",link.loc="identity",
                        n.ep=500, batch.size=50,init.loc=2, init.spread=5,init.xi=0.1,
-                       widths=c(6,3),seed=1,S_lambda=S_lambda)
+                       widths=c(6,3),seed=1)
 out<-bGEV.NN.predict(X.q=X.q,X.s=X.s,NN.fit$model)
 
 print("q_alpha linear coefficients: "); print(round(out$lin.coeff_q,2))
@@ -266,8 +232,8 @@ print("s_beta linear coefficients: "); print(round(out$lin.coeff_s,2))
 #To load model, run
 # model  <- load_model_tf("model_bGEV",
 #  custom_objects=list(
-#    "bgev_loss_alpha__beta__p_a__p_b__c1__c2__S_lambda___S_lambda_"=
-#        bgev_loss(S_lambda=S_lambda))
+#    "bgev_loss_alpha__beta__p_a__p_b__c1__c2_"=
+#        bgev_loss())
 #        )
 
 #Note that bGEV_loss() can take custom alpha,beta, p_a and p_b arguments if defaults not used

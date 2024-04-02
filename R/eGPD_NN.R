@@ -4,7 +4,7 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).
+#'  the network will have all convolutional layers (with 3 by 3 filters). If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions).
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -31,10 +31,8 @@
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial scale, kappa and shape estimates are \code{init.scale, init.kappa} and \code{init.xi}, respectively,  across all dimensions.
 #' @param widths vector of widths/filters for hidden layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.s} and \code{X.add.basis.k} on their respective parameters; each element only used if \code{!is.null(X.add.basis.s)} and \code{!is.null(X.add.basis.k)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty used for \eqn{\sigma}; similarly for the second element and \eqn{\kappa}. 
 #' @param A \eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied, defaults to \code{NULL}.
 #'
 #'@name eGPD.NN
@@ -54,7 +52,7 @@
 #'
 #' For details of the eGPD distribution, see \code{help(peGPD)}. 
 #'
-#' The model is fitted by minimising the negative log-likelihood associated with the bGEV model plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+#' The model is fitted by minimising the negative log-likelihood associated with the bGEV model; training is performed over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
@@ -75,7 +73,7 @@
 #' Cisneros, D., Richards, J., Dahal, A., Lombardo, L., and Huser, R. (2024), \emph{Deep learning-based graphical regression for jointly moderate and extreme Australian wildfires.} Spatial Statistics, 53:100811. (\href{https://doi.org/10.1016/j.spasta.2024.100811}{doi}).
 #'}
 #' @examples
-# Build and train a simple MLP for toy data
+#' # Build and train a simple MLP for toy data
 #' 
 #' set.seed(1)
 #' 
@@ -186,22 +184,7 @@
 #'     #Evaluate rad at all entries to X.add.k and for all knots
 #'   }}
 #' 
-#' 
-#' 
-#' 
-#' #Create smoothing penalty matrix for the sigma additive function
-#' 
-#' # Set smoothness parameter
-#' lambda = c(0.2)
-#' 
-#' S_lambda.s=matrix(0,nrow=n.knot.s*dim(X.add.s)[3],ncol=n.knot.s*dim(X.add.s)[3])
-#' for(i in 1:dim(X.add.s)[3]){
-#'   for(j in 1:n.knot.s){
-#'     for(k in 1:n.knot.s){
-#'       S_lambda.s[(j+(i-1)*n.knot.s),(k+(i-1)*n.knot.s)]=lambda[i]*rad(knots.s[i,j],knots.s[i,k])
-#'     }
-#'   }
-#' }
+
 #' #Get knots for kappa predictors
 #' knots.k=matrix(nrow=dim(X.add.k)[3],ncol=n.knot.k)
 #' 
@@ -219,23 +202,6 @@
 #'     #Evaluate rad at all entries to X.add.k and for all knots
 #'   }}
 #' 
-#' #'#Create smoothing penalty matrix for the two kappa additive functions
-#' 
-#' # Set smoothness parameters for two functions
-#' lambda = c(0.1,0.2)
-#' 
-#' S_lambda.k=matrix(0,nrow=n.knot.k*dim(X.add.k)[3],ncol=n.knot.k*dim(X.add.k)[3])
-#' for(i in 1:dim(X.add.k)[3]){
-#'   for(j in 1:n.knot.k){
-#'     for(k in 1:n.knot.k){
-#'       S_lambda.k[(j+(i-1)*n.knot.k),(k+(i-1)*n.knot.k)]=lambda[i]*rad(knots.k[i,j],knots.k[i,k])
-#'     }
-#'   }
-#' }
-#' 
-#' 
-#' #Join in one list
-#' S_lambda =list("S_lambda.k"=S_lambda.k, "S_lambda.s"=S_lambda.s)
 #' 
 #' #lin+GAM+NN models defined for both scale and kappa parameters
 #' X.s=list("X.nn.s"=X.nn.s, "X.lin.s"=X.lin.s,
@@ -247,7 +213,7 @@
 #' #Fit the eGPD model. Note that training is not run to completion.
 #' NN.fit<-eGPD.NN.train(Y.train, Y.valid,X.s,X.k, type="MLP",
 #'                       n.ep=50, batch.size=50,init.scale=1, init.kappa=1,init.xi=0.1,
-#'                       widths=c(6,3),seed=1,S_lambda=S_lambda)
+#'                       widths=c(6,3),seed=1)
 #' out<-eGPD.NN.predict(X.s=X.s,X.k=X.k,NN.fit$model)
 #' 
 #' print("sigma linear coefficients: "); print(round(out$lin.coeff_s,2))
@@ -261,8 +227,8 @@
 #' # #To load model, run
 #' #  model  <- load_model_tf("model_eGPD",
 #' #   custom_objects=list(
-#' #     "eGPD_loss_S_lambda___S_lambda_"=
-#' #       eGPD_loss(S_lambda=S_lambda))
+#' #     "eGPD_loss__"=
+#' #       eGPD_loss())
 #' #         )
 #' 
 #' 
@@ -311,7 +277,7 @@
 
 eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NULL, A=NULL,
                        n.ep=100, batch.size=100, init.scale=NULL, init.kappa=NULL, init.xi=NULL,
-                       widths=c(6,3), filter.dim=c(3,3), seed=NULL, init.wb_path=NULL, S_lambda=NULL)
+                       widths=c(6,3), seed=NULL, init.wb_path=NULL)
 {
   
 
@@ -358,9 +324,7 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NUL
   if(!is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= list(X.nn.s); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_s=X.nn.s),Y.valid)}
   if(is.null(X.nn.s) & is.null(X.add.basis.s) & is.null(X.lin.s) )   {train.data= list(); print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
   }
-  S_lambda.s=S_lambda$S_lambda.s
-  if(!is.null(X.add.basis.s) & is.null(S_lambda.s)){print("No smoothing penalty used for sigma")}
-  if(is.null(X.add.basis.s)){S_lambda.s=NULL}
+
   
   X.nn.k=X.k$X.nn.k
   X.lin.k=X.k$X.lin.k
@@ -375,13 +339,9 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NUL
   if(!is.null(X.nn.k) & is.null(X.add.basis.k) & is.null(X.lin.k) )   {train.data= c(train.data,list(X.nn.k)); print("Defining fully-NN model for kappa" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_k=X.nn.k)),Y.valid)}
   if(is.null(X.nn.k) & is.null(X.add.basis.k) & is.null(X.lin.k) )   {train.data= train.data; print("Defining stationary model for kappa" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
-  S_lambda.k=S_lambda$S_lambda.k
-  if(!is.null(X.add.basis.k) & is.null(S_lambda.k)){print("No smoothing penalty used for kappa")}
-  if(is.null(X.add.basis.k)){S_lambda.k=NULL}
+
   
-  S_lambda =list("S_lambda.k"=S_lambda.k, "S_lambda.s"=S_lambda.s)
-  
-  if(type=="CNN" & (!is.null(X.nn.k) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="CNN" & (!is.null(X.nn.k) | !is.null(X.nn.s)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", 3," by ", 3," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   if(type=="GCNN"  & (!is.null(X.nn.k) | !is.null(X.nn.s)) ) print(paste0("Building ",length(widths),"-layer graph convolutional neural network" ))
   
@@ -393,13 +353,13 @@ eGPD.NN.train=function(Y.train, Y.valid = NULL, X.s, X.k, type="MLP", offset=NUL
   
   model<-eGPD.NN.build(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset,type,init.scale,init.kappa,init.xi, widths, filter.dim, A, seed)
+                       offset,type,init.scale,init.kappa,init.xi, widths, A, seed)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
     optimizer="adam",
-    loss = eGPD_loss(S_lambda=S_lambda),
+    loss = eGPD_loss(),
     run_eagerly=T
   )
   
@@ -508,7 +468,7 @@ eGPD.NN.predict=function(X.s,X.k, model, offset=NULL)
 #'
 eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
                        X.nn.k,X.lin.k,X.add.basis.k,
-                       offset, type, init.scale,init.kappa,init.xi, widths,filter.dim, A, seed)
+                       offset, type, init.scale,init.kappa,init.xi, widths, A, seed)
 {
   
   if(type=="GCNN"){
@@ -620,7 +580,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchk <- nnBranchk  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchk <- nnBranchk  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.k)[-1], name = paste0('nn_k_cnn',i) )
       }
       
@@ -650,7 +610,7 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.s)[-1], name = paste0('nn_s_cnn',i) )
       }
       
@@ -826,11 +786,9 @@ eGPD.NN.build=function(X.nn.s,X.lin.s,X.add.basis.s,
 }
 
 
-eGPD_loss <-function(S_lambda=NULL){
+eGPD_loss <-function(){
   
-  S_lambda.k=S_lambda$S_lambda.k;   S_lambda.s=S_lambda$S_lambda.s
-  
-  if(is.null(S_lambda.k) & is.null(S_lambda.s)){
+
     loss<- function( y_true, y_pred) {
       
       K <- backend()
@@ -861,136 +819,6 @@ eGPD_loss <-function(S_lambda=NULL){
       
       return(-(K$sum(ll1+ll2+ll3+ll4)))
     }
-  }else if(!is.null(S_lambda.k) & !is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
 
-      kappa=y_pred[all_dims(),2]
-      sig=y_pred[all_dims(),1]
-      xi=y_pred[all_dims(),3]
-      y=K$relu(y_true)
-      
-      
-      sig=sig- sig*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
-      kappa=kappa- kappa*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      xi=xi- xi*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      
-      
-      t.gam.weights.k=K$constant(t(model$get_layer("add_k")$get_weights()[[1]]))
-      gam.weights.k=K$constant(model$get_layer("add_k")$get_weights()[[1]])
-      S_lambda.k.tensor=K$constant(S_lambda.k)
-      
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.s.tensor=K$constant(S_lambda.s)
-      
-      penalty = 0.5*K$dot(t.gam.weights.k,K$dot(S_lambda.k.tensor,gam.weights.k))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
-      
-      
-      #Evaluate log-likelihood
-      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
-      
-      #Uses non-zero response values only
-      ll2= K$log(sig) *K$sign(ll1)
-      
-      ll3=-K$log(kappa) *K$sign(ll1)
-      
-      y=y- y*(1-K$sign(y))+(1-K$sign(y)) #If zero, set y to 1
-      
-      ll4=(kappa-1)*K$log(1-(1+xi*y/sig)^(-1/xi))
-      
-      
-      return(penalty-
-               (K$sum(ll1+ll2+ll3+ll4))
-             )
- 
-    }
-  }else if(is.null(S_lambda.k) & !is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      sig=y_pred[all_dims(),1]
-      kappa=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      y=K$relu(y_true)
-      
-      
-      sig=sig- sig*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
-      kappa=kappa- kappa*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      xi=xi- xi*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      
-      
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.s.tensor=K$constant(S_lambda.s)
-      
-      penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.s.tensor,gam.weights.s))
-  
-      
-      #Evaluate log-likelihood
-      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
-      
-      #Uses non-zero response values only
-      ll2= K$log(sig) *K$sign(ll1)
-      
-      ll3=-K$log(kappa) *K$sign(ll1)
-      
-      y=y- y*(1-K$sign(y))+(1-K$sign(y)) #If zero, set y to 1
-      
-      ll4=(kappa-1)*K$log(1-(1+xi*y/sig)^(-1/xi))
-      
-      
-      return(penalty-
-               (K$sum(ll1+ll2+ll3+ll4))
-      )
-      
-    }
-  }else if(!is.null(S_lambda.k) & is.null(S_lambda.s)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      sig=y_pred[all_dims(),1]
-      kappa=y_pred[all_dims(),2]
-      xi=y_pred[all_dims(),3]
-      y=K$relu(y_true)
-      
-      
-      sig=sig- sig*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set sig to 1
-      kappa=kappa- kappa*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      xi=xi- xi*(1-K$sign(y))+(1-K$sign(y)) #If no exceedance, set kappa to 1
-      
-  
-  
-      t.gam.weights.k=K$constant(t(model$get_layer("add_k")$get_weights()[[1]]))
-      gam.weights.k=K$constant(model$get_layer("add_k")$get_weights()[[1]])
-      S_lambda.k.tensor=K$constant(S_lambda.k)
-
-      penalty = 0.5*K$dot(t.gam.weights.k,K$dot(S_lambda.k.tensor,gam.weights.k))
-      
-      
-      #Evaluate log-likelihood
-      ll1=-(1/xi+1)*tf$math$log1p(xi*y/sig)
-      
-      #Uses non-zero response values only
-      ll2= K$log(sig) *K$sign(ll1)
-      
-      ll3=-K$log(kappa) *K$sign(ll1)
-      
-      y=y- y*(1-K$sign(y))+(1-K$sign(y)) #If zero, set y to 1
-      
-      ll4=(kappa-1)*K$log(1-(1+xi*y/sig)^(-1/xi))
-      
-      
-      return(penalty-
-               (K$sum(ll1+ll2+ll3+ll4))
-      )
-    }
-  }
   return(loss)
 }

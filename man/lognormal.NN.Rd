@@ -8,8 +8,7 @@
 \usage{
 lognormal.NN.train(Y.train, Y.valid = NULL, X.mu, X.sig, type = "MLP",
   link.loc = "identity", n.ep = 100, batch.size = 100, init.loc = NULL,
-  init.sig = NULL, widths = c(6, 3), filter.dim = c(3, 3), seed = NULL,
-  init.wb_path = NULL, S_lambda = NULL)
+  init.sig = NULL, widths = c(6, 3), seed = NULL, init.wb_path = NULL)
 
 lognormal.NN.predict(X.mu, X.sig, model)
 }
@@ -35,7 +34,7 @@ Note that \code{X.mu} and \code{X.sig} are the predictors for both \code{Y.train
 \item{X.sig}{similarly to \code{X.mu}, but for modelling the shape parameter \eqn{\sigma>0}. Note that we require at least one of \code{!is.null(X.mu)} or \code{!is.null(X.sig)}, otherwise the formulated model will be fully stationary and will not be fitted.}
 
 \item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
+the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)}
 
 \item{n.ep}{number of epochs used for training. Defaults to 1000.}
 
@@ -45,15 +44,11 @@ the network will have all convolutional layers. Defaults to an MLP. (Currently t
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.}
-
 \item{seed}{seed for random initial weights and biases.}
 
 \item{init.wb_path}{filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
 the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 final layer has zero initial weights to ensure that the initial location and shape estimates are \code{init.loc} and \code{init.sig}, respectively,  across all dimensions.}
-
-\item{S_lambda}{list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{\mu}; similarly for the second element and \eqn{\sigma}.}
 
 \item{model}{fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.}
 
@@ -80,7 +75,7 @@ both returned as outputs by \code{lognormal.NN.predict}; \eqn{m^{(1)}_N,m^{(2)}_
 
 For details of the log-normal parameterisation, see \code{help(Lognormal)}.
 
-The model is fitted by minimising the negative log-likelihood associated with the lognormal distribution plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+The model is fitted by minimising the negative log-likelihood associated with the lognormal distribution; training is performed over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -190,21 +185,6 @@ for( i in 1:dim(X.add.mu)[4]) {
     #Evaluate rad at all entries to X.add.mu and for all knots
   }}
   
-  #'#Create smoothing penalty matrix for the two q_alpha additive functions
-
-# Set smoothness parameters for two functions
- lambda = c(0.1,0.2) 
-
-S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.add.mu)[4],
-ncol=n.knot.mu*dim(X.add.mu)[4])
-
-for(i in 1:dim(X.add.mu)[4]){
- for(j in 1:n.knot.mu){
-  for(k in 1:n.knot.mu){
-     S_lambda.mu[(j+(i-1)*n.knot.mu),(k+(i-1)*n.knot.mu)]=lambda[i]*rad(knots.mu[i,j],knots.mu[i,k])
-  }
-}
-}
 
 #Get knots for sigma predictor
 
@@ -224,25 +204,6 @@ for( i in 1:dim(X.add.sig)[4]) {
     #Evaluate rad at all entries to X.add.mu and for all knots
   }}
 
-#Create smoothing penalty matrix for the s_beta additive function
-
-# Set smoothness parameter
- lambda = c(0.2) 
-
-S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.add.sig)[4],
-ncol=n.knot.sig*dim(X.add.sig)[4])
-
-for(i in 1:dim(X.add.sig)[4]){
- for(j in 1:n.knot.sig){
-  for(k in 1:n.knot.sig){
-     S_lambda.sig[(j+(i-1)*n.knot.sig),(k+(i-1)*n.knot.sig)]=lambda[i]*rad(knots.sig[i,j],knots.sig[i,k])
-  }
-}
-}
- 
-#Join in one list
-S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)
-
 
 #lin+GAM+NN models defined for both location and scale parameters
 X.mu=list("X.nn.mu"=X.nn.mu, "X.lin.mu"=X.lin.mu,
@@ -254,7 +215,7 @@ X.sig=list("X.nn.sig"=X.nn.sig, "X.lin.sig"=X.lin.sig,
 #Fit the log-normal model. Note that training is not run to completion.
 NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.mu,X.sig, type="MLP",link.loc="identity",
                           n.ep=50, batch.size=50,
-                          widths=c(6,3),seed=1,S_lambda=S_lambda)
+                          widths=c(6,3),seed=1)
 out<-lognormal.NN.predict(X.mu=X.mu,X.sig=X.sig,NN.fit$model)
 
 print("mu linear coefficients: "); print(round(out$lin.coeff_loc,3))
@@ -267,8 +228,8 @@ print("sig linear coefficients: "); print(round(out$lin.coeff_sig,3))
 ## To load model, run
 #model  <- load_model_tf("model_lognormal",
 #                        custom_objects=list(
-#                          "lognormal_loss_S_lambda___S_lambda_"=
-#                            lognormal_loss(S_lambda=S_lambda))
+#                          "lognormal_loss__"=
+#                            lognormal_loss())
 #)
 
 
@@ -313,6 +274,6 @@ for(i in 1:n.add.preds_sig){
 \references{
 {
 
-Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 }
 }

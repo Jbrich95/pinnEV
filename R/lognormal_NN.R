@@ -4,7 +4,7 @@
 #'
 
 #' @param type  string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"},
-#'  the network will have all convolutional layers. Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
+#'  the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP. (Currently the same network is used for all parameters, may change in future versions)
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -30,11 +30,9 @@
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial location and shape estimates are \code{init.loc} and \code{init.sig}, respectively,  across all dimensions.
 #' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer across all parameters with NN predictors.
 #' @param seed seed for random initial weights and biases.
 #' @param loc.link string defining the link function used for the location parameter, see \eqn{h_1} below. If \code{link=="exp"}, then \eqn{h_1=\exp(x)}; if \code{link=="identity"}, then \eqn{h_1(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{bGEVPP.NN.train}.
-#' @param S_lambda list of smoothing penalty matrices for the splines modelling the effects of \code{X.add.basis.mu} and \code{X.add.basis.sig} on their respective parameters; each element only used if \code{!is.null(X.add.basis.mu)} and \code{!is.null(X.add.basis.sig)}, respectively. If \code{is.null(S_lambda[[1]])}, then no smoothing penalty is used for \eqn{\mu}; similarly for the second element and \eqn{\sigma}. 
 
 #'@name lognormal.NN
 
@@ -52,7 +50,7 @@
 #'
 #' For details of the log-normal parameterisation, see \code{help(Lognormal)}. 
 #'
-#' The model is fitted by minimising the negative log-likelihood associated with the lognormal distribution plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022); training is performed over \code{n.ep} training epochs.
+#' The model is fitted by minimising the negative log-likelihood associated with the lognormal distribution; training is performed over \code{n.ep} training epochs.
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
@@ -61,7 +59,7 @@
 #'
 #'@references{
 #'
-#' Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#' Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'}
 #' @examples
 #'
@@ -168,21 +166,6 @@
 #'     #Evaluate rad at all entries to X.add.mu and for all knots
 #'   }}
 #'   
-#'   #'#Create smoothing penalty matrix for the two q_alpha additive functions
-#' 
-#'# Set smoothness parameters for two functions
-#'  lambda = c(0.1,0.2) 
-#'
-#' S_lambda.mu=matrix(0,nrow=n.knot.mu*dim(X.add.mu)[4],
-#' ncol=n.knot.mu*dim(X.add.mu)[4])
-#' 
-#'for(i in 1:dim(X.add.mu)[4]){
-#'  for(j in 1:n.knot.mu){
-#'   for(k in 1:n.knot.mu){
-#'      S_lambda.mu[(j+(i-1)*n.knot.mu),(k+(i-1)*n.knot.mu)]=lambda[i]*rad(knots.mu[i,j],knots.mu[i,k])
-#'   }
-#' }
-#'}
 #'
 #' #Get knots for sigma predictor
 #' 
@@ -202,25 +185,6 @@
 #'     #Evaluate rad at all entries to X.add.mu and for all knots
 #'   }}
 #'
-#'#Create smoothing penalty matrix for the s_beta additive function
-#' 
-#'# Set smoothness parameter
-#'  lambda = c(0.2) 
-#'
-#' S_lambda.sig=matrix(0,nrow=n.knot.sig*dim(X.add.sig)[4],
-#' ncol=n.knot.sig*dim(X.add.sig)[4])
-#' 
-#'for(i in 1:dim(X.add.sig)[4]){
-#'  for(j in 1:n.knot.sig){
-#'   for(k in 1:n.knot.sig){
-#'      S_lambda.sig[(j+(i-1)*n.knot.sig),(k+(i-1)*n.knot.sig)]=lambda[i]*rad(knots.sig[i,j],knots.sig[i,k])
-#'   }
-#' }
-#'}
-#'  
-#'#Join in one list
-#'S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)
-#'
 #'
 #' #lin+GAM+NN models defined for both location and scale parameters
 #' X.mu=list("X.nn.mu"=X.nn.mu, "X.lin.mu"=X.lin.mu,
@@ -232,7 +196,7 @@
 #' #Fit the log-normal model. Note that training is not run to completion.
 #' NN.fit<-lognormal.NN.train(Y.train, Y.valid,X.mu,X.sig, type="MLP",link.loc="identity",
 #'                           n.ep=50, batch.size=50,
-#'                           widths=c(6,3),seed=1,S_lambda=S_lambda)
+#'                           widths=c(6,3),seed=1)
 #' out<-lognormal.NN.predict(X.mu=X.mu,X.sig=X.sig,NN.fit$model)
 #'
 #' print("mu linear coefficients: "); print(round(out$lin.coeff_loc,3))
@@ -245,8 +209,8 @@
 #' ## To load model, run
 #' #model  <- load_model_tf("model_lognormal",
 #' #                        custom_objects=list(
-#' #                          "lognormal_loss_S_lambda___S_lambda_"=
-#' #                            lognormal_loss(S_lambda=S_lambda))
+#' #                          "lognormal_loss__"=
+#' #                            lognormal_loss())
 #' #)
 #'
 #'
@@ -293,7 +257,7 @@
 
 lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.loc="identity",
                        n.ep=100, batch.size=100,init.loc=NULL, init.sig=NULL,
-                       widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,S_lambda=NULL)
+                       widths=c(6,3),seed=NULL,init.wb_path=NULL)
 {
   
   
@@ -321,10 +285,7 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.
   if(is.null(X.nn.mu) & !is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(X.add.basis.mu); print("Defining fully-additive model for mu" );  if(!is.null(Y.valid)) validation.data=list(list(add_input_loc=X.add.basis.mu),Y.valid)}
   if(!is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(X.nn.mu); print("Defining fully-NN model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( nn_input_loc=X.nn.mu),Y.valid)}
   if(is.null(X.nn.mu) & is.null(X.add.basis.mu) & is.null(X.lin.mu) )   {train.data= list(); print("Defining stationary model for mu" );  if(!is.null(Y.valid)) validation.data=list(list( ),Y.valid)}
-  
-  S_lambda.mu=S_lambda$S_lambda.mu
-  if(!is.null(X.add.basis.mu) & is.null(S_lambda.mu)){print("No smoothing penalty used for mu")}
-  if(is.null(X.add.basis.mu)){S_lambda.mu=NULL}
+
   
   X.nn.sig=X.sig$X.nn.sig
   X.lin.sig=X.sig$X.lin.sig
@@ -339,12 +300,7 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.
   if(!is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= c(train.data,list(X.nn.sig)); print("Defining fully-NN model for sigma" );  if(!is.null(Y.valid)) validation.data=list(c(validation.data[[1]],list(nn_input_s=X.nn.sig)),Y.valid)}
   if(is.null(X.nn.sig) & is.null(X.add.basis.sig) & is.null(X.lin.sig) )   {train.data= train.data; print("Defining stationary model for sigma" );  if(!is.null(Y.valid)) validation.data=validation.data}
   
-  S_lambda.sig=S_lambda$S_lambda.sig
-  if(!is.null(X.add.basis.sig) &is.null(S_lambda.sig)){print("No smoothing penalty used for sigma")}
-  if(is.null(X.add.basis.sig)){S_lambda.sig=NULL}
-  
-  S_lambda =list("S_lambda.mu"=S_lambda.mu, "S_lambda.sig"=S_lambda.sig)
-  
+
   if(type=="CNN" & (!is.null(X.nn.mu) | !is.null(X.nn.sig)))print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
   if(type=="MLP"  & (!is.null(X.nn.mu) | !is.null(X.nn.sig)) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
   
@@ -354,13 +310,13 @@ lognormal.NN.train=function(Y.train, Y.valid = NULL,X.mu,X.sig, type="MLP",link.
   
   model<-lognormal.NN.build(X.nn.mu,X.lin.mu,X.add.basis.mu,
                        X.nn.sig,X.lin.sig,X.add.basis.sig,
-                       type, init.loc,init.sig, widths,filter.dim,link.loc)
+                       type, init.loc,init.sig, widths,link.loc)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
     optimizer="adam",
-    loss = lognormal_loss(S_lambda=S_lambda),
+    loss = lognormal_loss(),
     run_eagerly=T
   )
   
@@ -457,7 +413,7 @@ lognormal.NN.predict=function(X.mu,X.sig, model)
 #'
 lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
                        X.nn.sig,X.lin.sig,X.add.basis.sig,
-                       type, init.loc,init.sig, widths,filter.dim,link.loc)
+                       type, init.loc,init.sig, widths,link.loc)
 {
   #Additive inputs
   if(!is.null(X.add.basis.mu))  input_add_loc<- layer_input(shape = dim(X.add.basis.mu)[-1], name = 'add_input_loc')
@@ -494,7 +450,7 @@ lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchloc <- nnBranchloc  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchloc <- nnBranchloc  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.mu)[-1], name = paste0('nn_loc_cnn',i) )
       }
       
@@ -518,7 +474,7 @@ lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchs <- nnBranchs  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn.sig)[-1], name = paste0('nn_s_cnn',i) )
       }
       
@@ -683,11 +639,10 @@ lognormal.NN.build=function(X.nn.mu,X.lin.mu,X.add.basis.mu,
 }
 
 
-lognormal_loss <-function(S_lambda=NULL){
+lognormal_loss <-function(){
   
-  S_lambda.mu=S_lambda$S_lambda.mu;   S_lambda.sig=S_lambda$S_lambda.sig
-  
-  if(is.null(S_lambda.mu) & is.null(S_lambda.sig)){
+
+ 
     loss<- function( y_true, y_pred) {
       
       library(tensorflow)
@@ -719,131 +674,6 @@ lognormal_loss <-function(S_lambda=NULL){
       return( -K$sum(ll1)   -K$sum(ll2) 
       )
     }
-  }else if(!is.null(S_lambda.mu) & !is.null(S_lambda.sig)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      mu=y_pred[all_dims(),1]
-      sig=y_pred[all_dims(),2]
-      
-      y <- y_true
-
-      t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
-      gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
-      S_lambda.mu.tensor=K$constant(S_lambda.mu)
-      
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.sig.tensor=K$constant(S_lambda.sig)
-      
-      penalty = 0.5*K$dot(t.gam.weights.mu,K$dot(S_lambda.mu.tensor,gam.weights.mu))+0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.sig.tensor,gam.weights.s))
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
-      sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
-      mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
-      
-      
-      #Evaluate log-likelihood
-      ll1=-K$log(y)-K$log(sig)-0.5*K$log(2*pi)
-      ll1=ll1*obsInds # set all ll1 contribution to zero for missing responses
-      
-      
-      ll2= -(K$log(y)-mu)^2/(2*sig^2)
-      ll2=ll2*obsInds # set all ll2 contribution to zero for missing responses
-      
-      return( penalty-K$sum(ll1)   -K$sum(ll2) 
-      )
-    }
-  }else if(is.null(S_lambda.mu) & !is.null(S_lambda.sig)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      mu=y_pred[all_dims(),1]
-      sig=y_pred[all_dims(),2]
-      
-      y <- y_true
-
-      t.gam.weights.s=K$constant(t(model$get_layer("add_s")$get_weights()[[1]]))
-      gam.weights.s=K$constant(model$get_layer("add_s")$get_weights()[[1]])
-      S_lambda.sig.tensor=K$constant(S_lambda.sig)
-      
-      penalty = 0.5*K$dot(t.gam.weights.s,K$dot(S_lambda.sig.tensor,gam.weights.s))
-      
-      
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
-      sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
-      mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
-      
-      
-      #Evaluate log-likelihood
-      ll1=-K$log(y)-K$log(sig)-0.5*K$log(2*pi)
-      ll1=ll1*obsInds # set all ll1 contribution to zero for missing responses
-      
-      
-      ll2= -(K$log(y)-mu)^2/(2*sig^2)
-      ll2=ll2*obsInds # set all ll2 contribution to zero for missing responses
-      
-      return( penalty-K$sum(ll1) -K$sum(ll2) 
-      )
-    }
-  }else if(!is.null(S_lambda.mu) & is.null(S_lambda.sig)){
-    loss<- function( y_true, y_pred) {
-      
-      library(tensorflow)
-      K <- backend()
-      
-      
-      mu=y_pred[all_dims(),1]
-      sig=y_pred[all_dims(),2]
-
-      y <- y_true
-
-      t.gam.weights.mu=K$constant(t(model$get_layer("add_loc")$get_weights()[[1]]))
-      gam.weights.mu=K$constant(model$get_layer("add_loc")$get_weights()[[1]])
-      S_lambda.mu.tensor=K$constant(S_lambda.mu)
-      
-      
-      penalty = 0.5*K$dot(t.gam.weights.mu,K$dot(S_lambda.mu.tensor,gam.weights.mu))
-      
-      
-      
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e9) value to y and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y+9e9))
-      
-      y=K$relu(y)+(1-obsInds)*1 #Sets all missing response values to 1
-      sig=sig*obsInds+(1-obsInds)*1 #Sets all sigmas for missing response values to 1
-      mu=mu*obsInds+(1-obsInds)*1 #Sets all mus for missing response values to 1
-      
-      
-      #Evaluate log-likelihood
-      ll1=-K$log(y)-K$log(sig)-0.5*K$log(2*pi)
-      ll1=ll1*obsInds # set all ll1 contribution to zero for missing responses
-      
-      
-      ll2= -(K$log(y)-mu)^2/(2*sig^2)
-      ll2=ll2*obsInds # set all ll2 contribution to zero for missing responses
-      
-      return( penalty-K$sum(ll1)  -K$sum(ll2) 
-      )
-    }
-  }
+  
   return(loss)
 }

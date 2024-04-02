@@ -7,9 +7,7 @@
 \title{Logistic regression PINN}
 \usage{
 logistic.NN.train(Y.train, Y.valid = NULL, X, type = "MLP", A = NULL,
-  n.ep = 100, batch.size = 100, init.p = NULL, widths = c(6, 3),
-  filter.dim = c(3, 3), seed = NULL, init.wb_path = NULL,
-  S_lambda = NULL)
+  seed = NULL, init.wb_path = NULL)
 
 logistic.NN.predict(X, model)
 }
@@ -32,19 +30,9 @@ The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dim
 }
 Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
-\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions). Defaults to an MLP.}
+\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers (with 3 by 3 filters). If \code{type=="GCNN"}, then a graph convolutional neural network (with skip connections) is used and require \code{!is.null(A)}. Defaults to an MLP (currently the same network is used for all parameters, may change in future versions). Defaults to an MLP.}
 
 \item{A}{\eqn{M \times M} adjacency matrix used if and only if \code{type=="GCNN"}. Must be supplied in this case.}
-
-\item{n.ep}{number of epochs used for training. Defaults to 1000.}
-
-\item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
-
-\item{init.p}{sets the initial probability estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.}
-
-\item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
-
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.}
 
 \item{seed}{seed for random initial weights and biases.}
 
@@ -54,7 +42,13 @@ final layer has zero initial weights to ensure that the initial probability esti
 
 \item{model}{fitted \code{keras} model. Output from \code{logistic.NN.train}.}
 
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on \eqn{\mbox{logit}(p)}; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.}
+\item{n.ep}{number of epochs used for training. Defaults to 1000.}
+
+\item{batch.size}{batch size for stochastic gradient descent. If larger than \code{dim(Y.train)[1]}, i.e., the number of observations, then regular gradient descent used.}
+
+\item{init.p}{sets the initial probability estimate across all dimensions of \code{Y.train}. Defaults to empirical estimate. Overriden by \code{init.wb_path} if \code{!is.null(init.wb_path)}.}
+
+\item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 }
 \value{
 \code{logistic.NN.train} returns the fitted \code{model}.  \code{logistic.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted probability estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -71,7 +65,7 @@ We model \eqn{Y|\mathbf{X}=\mathbf{x}\sim\mbox{Bernoulli}(p\{\mathbf{x})\}} with
 \eqn{\eta_0} is a constant intercept. The unknown functions \eqn{m_L} and \eqn{m_A} are estimated using a linear function and spline, respectively,
 and are both returned as outputs by \code{logistic.NN.predict}; \eqn{m_N} is estimated using a neural network.
 
-The model is fitted by minimising the binary cross-entropy loss plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) over \code{n.ep} training epochs.
+The model is fitted by minimising the binary cross-entropy loss over \code{n.ep} training epochs.
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -153,19 +147,6 @@ X.add.basis[,,,i,k]= rad(x=X.add[,,,i],c=knots[i,k])
 #Evaluate rad at all entries to X.add and for all knots
 }}
 
- #Penalty matrix for additive functions
-
-# Set smoothness parameters for first and second additive functions
- lambda = c(0.1,0.1) 
- 
-S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
-for(i in 1:dim(X.add)[4]){
- for(j in 1:n.knot){
-  for(k in 1:n.knot){
-     S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
-  }
-}
-}
 
 X=list("X.nn"=X.nn, "X.lin"=X.lin,
 "X.add.basis"=X.add.basis)
@@ -173,8 +154,7 @@ X=list("X.nn"=X.nn, "X.lin"=X.lin,
 #Build and train a two-layered "lin+GAM+NN" logistic MLP. 
 #Note that training is not run to completion.
 NN.fit<-logistic.NN.train(Y.train, Y.valid,X,  type="MLP",n.ep=600,
-                      batch.size=100,init.p=0.4, widths=c(6,3),
-                      S_lambda=S_lambda)
+                      batch.size=100,init.p=0.4, widths=c(6,3))
 
 out<-logistic.NN.predict(X,NN.fit$model)
 hist(out$pred.p) #Plot histogram of predicted probability
@@ -197,7 +177,7 @@ for(i in 1:n.add.preds){
 
 #To save model, run NN.fit$model \%>\% save_model_tf("model_Bernoulli")
 #To load model, run model  <- load_model_tf("model_Bernoulli",
-#custom_objects=list("bce_loss_S_lambda___S_lambda_"=bce.loss(S_lambda)))
+#custom_objects=list("bce_loss__"=bce.loss()))
 
 }
 \references{

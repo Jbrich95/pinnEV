@@ -8,8 +8,8 @@
 \usage{
 quant.NN.train(Y.train, Y.valid = NULL, X, type = "MLP",
   link = "identity", tau = NULL, offset = NULL, n.ep = 100,
-  batch.size = 100, init.q = NULL, widths = c(6, 3), filter.dim = c(3,
-  3), seed = NULL, init.wb_path = NULL, S_lambda = NULL)
+  batch.size = 100, init.q = NULL, widths = c(6, 3), seed = NULL,
+  init.wb_path = NULL)
 
 quant.NN.predict(X, model, offset = NULL)
 }
@@ -32,7 +32,7 @@ The first 2/3 dimensions should be equal to that of \code{Y.train}; the last dim
 }
 Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.}
 
-\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.}
+\item{type}{string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP.}
 
 \item{link}{string defining the link function used, see \eqn{h} below. If \code{link=="exp"}, then \eqn{h=\exp(x)}; if \code{link=="identity"}, then \eqn{h(x)=x}.}
 
@@ -48,8 +48,6 @@ Note that \code{X} is the predictors for both \code{Y.train} and \code{Y.valid}.
 
 \item{widths}{vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).}
 
-\item{filter.dim}{if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.}
-
 \item{seed}{seed for random initial weights and biases.}
 
 \item{init.wb_path}{filepath to a \code{keras} model which is then used as initial weights and biases for training the new model. The original model must have
@@ -57,8 +55,6 @@ the exact same architecture and trained with the same input data as the new mode
 final layer has zero initial weights to ensure that the initial quantile estimate is \code{init.q} across all dimensions.}
 
 \item{model}{fitted \code{keras} model. Output from \code{quant.NN.train}.}
-
-\item{S_lamda}{smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.}
 }
 \value{
 \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
@@ -76,7 +72,7 @@ constant intercept and \eqn{C(\mathbf{x})} is a fixed offset term (see Richards 
 both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network. The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})}.
 
 The model is fitted by minimising the penalised tilted loss over \code{n.ep} training epochs; the loss is given by
-\deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
+\deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
 Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 
@@ -159,27 +155,13 @@ X.add.basis[,,,i,k]= rad(x=X.add[,,,i],c=knots[i,k])
 }}
 
 
-#Penalty matrix for additive functions
-
-# Set smoothness parameters for first and second additive functions
- lambda = c(0.2,0.1) 
- 
-S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
-for(i in 1:dim(X.add)[4]){
- for(j in 1:n.knot){
-  for(k in 1:n.knot){
-     S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
-  }
-}
-}
-
 #Build lin+GAM+NN model.
 X=list("X.nn"=X.nn, "X.lin"=X.lin,
 "X.add.basis"=X.add.basis)
 
 #Build and train a two-layered "lin+GAM+NN" MLP. Note that training is not run to completion.
 NN.fit<-quant.NN.train(Y.train, Y.valid,X,  type="MLP",link="identity",tau=0.5,n.ep=600,
-                      batch.size=100, widths=c(6,3),S_lambda=S_lambda)
+                      batch.size=100, widths=c(6,3))
 
 out<-quant.NN.predict(X,model=NN.fit$model)
 hist(out$pred.q) #Plot histogram of predicted quantiles
@@ -205,13 +187,13 @@ tau <- 0.5
 # NN.fit$model \%>\% save_model_tf(paste0("model_",tau,"-quantile"))
 #To load model, run
 #model  <- load_model_tf(paste0("model_",tau,"-quantile"),
-#custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
+#custom_objects=list("tilted_loss_tau___tau_"=tilted.loss(tau)))
 
 }
 \references{
 {
-Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 
-Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
+Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2023), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
 }
 }

@@ -4,7 +4,7 @@
 #'
 #'@name quant.NN
 
-#' @param type string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers. Defaults to an MLP.
+#' @param type string defining the type of network to be built. If \code{type=="MLP"}, the network will have all densely connected layers; if \code{type=="CNN"}, the network will have all convolutional layers (with 3 by 3 filters). Defaults to an MLP.
 #' @param Y.train,Y.valid a 2 or 3 dimensional array of training or validation real response values.
 #' Missing values can be handled by setting corresponding entries to \code{Y.train} or \code{Y.valid} to \code{-1e10}.
 #' The first dimension should be the observation indices, e.g., time.
@@ -31,11 +31,9 @@
 #' the exact same architecture and trained with the same input data as the new model. If \code{NULL}, then initial weights and biases are random (with seed \code{seed}) but the
 #' final layer has zero initial weights to ensure that the initial quantile estimate is \code{init.q} across all dimensions.
 #' @param widths vector of widths/filters for hidden dense/convolution layers. Number of layers is equal to \code{length(widths)}. Defaults to (6,3).
-#' @param filter.dim if \code{type=="CNN"}, this 2-vector gives the dimensions of the convolution filter kernel; must have odd integer inputs. Note that filter.dim=c(1,1) is equivalent to \code{type=="MLP"}. The same filter is applied for each hidden layer.
 #' @param seed seed for random initial weights and biases.
 #' @param link string defining the link function used, see \eqn{h} below. If \code{link=="exp"}, then \eqn{h=\exp(x)}; if \code{link=="identity"}, then \eqn{h(x)=x}.
 #' @param model fitted \code{keras} model. Output from \code{quant.NN.train}.
-#' @param S_lamda smoothing penalty matrix for the splines modelling the effect of \code{X.add.basis} on the inverse-\code{link} of the \code{tau}-quantile; only used if \code{!is.null(X.add.basis)}. If \code{is.null(S_lambda)}, then no smoothing penalty is used.
 
 #' @details{
 #' Consider a real-valued random variable \eqn{Y} and let \eqn{\mathbf{X}} denote a \eqn{d}-dimensional predictor set with observations \eqn{\mathbf{x}}.
@@ -46,7 +44,7 @@
 #' both returned as outputs by \code{quant.NN.predict}; \eqn{m_N} is estimated using a neural network. The offset term is, by default, \eqn{C(\mathbf{x})=1} for all \eqn{\mathbf{x}}; if \code{!is.null(offset)}, then \code{offset} determines \eqn{C(\mathbf{x})}.
 #'
 #' The model is fitted by minimising the penalised tilted loss over \code{n.ep} training epochs; the loss is given by
-#' \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} plus some smoothing penalty for the additive functions (determined by \code{S_lambda}; see Richards and Huser, 2022) and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
+#' \deqn{l(y_\tau; y)=\max\{\tau(y-y_\tau),(\tau-1)(y-y_\tau)\}} and is averaged over all entries to \code{Y.train} (or \code{Y.valid}).
 #' Although the model is trained by minimising the loss evaluated for \code{Y.train}, the final returned model may minimise some other loss.
 #' The current state of the model is saved after each epoch, using \code{keras::callback_model_checkpoint}, if the value of some criterion subcedes that of the model from the previous checkpoint; this criterion is the loss evaluated for validation set \code{Y.valid} if \code{!is.null(Y.valid)} and for \code{Y.train}, otherwise.
 #'
@@ -54,9 +52,9 @@
 #' @return \code{quant.NN.train} returns the fitted \code{model}.  \code{quant.NN.predict} is a wrapper for \code{keras::predict} that returns the predicted \code{tau}-quantile estimates, and, if applicable, the linear regression coefficients and spline bases weights.
 #'
 #' @references{
-#'Richards, J. and Huser, R. (2022), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
+#'Richards, J. and Huser, R. (2024+), \emph{Regression modelling of spatiotemporal extreme U.S. wildfires via partially-interpretable neural networks}. (\href{https://arxiv.org/abs/2208.07581}{arXiv:2208.07581}).
 #'
-#' Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2022), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
+#' Richards, J., Huser, R., Bevacqua, E., Zscheischler, J,  (2023), \emph{Insights into the drivers and spatio-temporal trends of extreme Mediterranean wildfires with statistical deep-learning.} (\href{https://arxiv.org/abs/2212.01796}{arXiv:2212.01796})
 #'}
 #' @examples
 #'
@@ -135,20 +133,6 @@
 #' #Evaluate rad at all entries to X.add and for all knots
 #' }}
 #' 
-#' 
-#' #Penalty matrix for additive functions
-#' 
-#'# Set smoothness parameters for first and second additive functions
-#'  lambda = c(0.2,0.1) 
-#'  
-#'S_lambda=matrix(0,nrow=n.knot*dim(X.add)[4],ncol=n.knot*dim(X.add)[4])
-#'for(i in 1:dim(X.add)[4]){
-#'  for(j in 1:n.knot){
- #'   for(k in 1:n.knot){
-#'      S_lambda[(j+(i-1)*n.knot),(k+(i-1)*n.knot)]=lambda[i]*rad(knots[i,j],knots[i,k])
- #'   }
- #' }
-#'}
 #'
 #'#Build lin+GAM+NN model.
 #' X=list("X.nn"=X.nn, "X.lin"=X.lin,
@@ -156,7 +140,7 @@
 #'
 #'#Build and train a two-layered "lin+GAM+NN" MLP. Note that training is not run to completion.
 #' NN.fit<-quant.NN.train(Y.train, Y.valid,X,  type="MLP",link="identity",tau=0.5,n.ep=600,
-#'                       batch.size=100, widths=c(6,3),S_lambda=S_lambda)
+#'                       batch.size=100, widths=c(6,3))
 #'
 #' out<-quant.NN.predict(X,model=NN.fit$model)
 #'hist(out$pred.q) #Plot histogram of predicted quantiles
@@ -184,7 +168,7 @@
 #'# NN.fit$model %>% save_model_tf(paste0("model_",tau,"-quantile"))
 #'#To load model, run
 #'#model  <- load_model_tf(paste0("model_",tau,"-quantile"),
-#'#custom_objects=list("tilted_loss_tau___tau__S_lambda_"=tilted.loss(tau,S_lambda)))
+#'#custom_objects=list("tilted_loss_tau___tau_"=tilted.loss(tau)))
 #'
 #' @import reticulate tensorflow keras
 #'
@@ -192,8 +176,7 @@
 #' @export
 
 quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",tau=NULL,offset=NULL,
-                       n.ep=100, batch.size=100,init.q=NULL, widths=c(6,3), filter.dim=c(3,3),seed=NULL,init.wb_path=NULL,
-                       S_lambda=NULL)
+                       n.ep=100, batch.size=100,init.q=NULL, widths=c(6,3),seed=NULL,init.wb_path=NULL)
 {
 
   
@@ -227,11 +210,8 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
     if(!is.null(X.nn) & is.null(X.add.basis) & is.null(X.lin) )   {train.data= list(X.nn,offset); print("Defining fully-NN model for tau-quantile" ) ; if(!is.null(Y.valid)) validation.data=list(list( nn_input_q=X.nn,offset_input=offset),Y.valid)}
 
   }
-  if(is.null(S_lambda) & !is.null(X.add.basis)){print("No smoothing penalty used")}
 
-  if(is.null(X.add.basis)){S_lambda=NULL}
-
-  if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", filter.dim[1]," by ", filter.dim[2]," filter" ))
+  if(type=="CNN" & !is.null(X.nn)) print(paste0("Building ",length(widths),"-layer convolutional neural network with ", 3," by ", 3," filter" ))
   if(type=="MLP"  & !is.null(X.nn) ) print(paste0("Building ",length(widths),"-layer densely-connected neural network" ))
 
   reticulate::use_virtualenv("pinnEV_env", required = T)
@@ -240,13 +220,13 @@ quant.NN.train=function(Y.train, Y.valid = NULL,X, type="MLP",link="identity",ta
   if(!is.null(offset) & length(dim(offset))!=length(dim(Y.train))+1) dim(offset)=c(dim(offset),1)
   if(is.null(init.q)) init.q=quantile(Y.train[Y.train!=-1e10],prob=tau)
   model<-quant.NN.build(X.nn,X.lin,X.add.basis, offset,
-                        type, init.q, widths,filter.dim,link,tau)
+                        type, init.q, widths,link,tau)
   
   if(!is.null(init.wb_path)) model <- load_model_weights_tf(model,filepath=init.wb_path)
   
   model %>% compile(
     optimizer="adam",
-    loss = tilted.loss(tau=tau,S_lambda=S_lambda),
+    loss = tilted.loss(tau=tau),
     run_eagerly=T
   )
 
@@ -330,7 +310,7 @@ quant.NN.predict=function(X, model,offset=NULL)
 }
 #'
 #'
-quant.NN.build=function(X.nn,X.lin,X.add.basis, offset, type, init.q, widths,filter.dim,link,tau=tau)
+quant.NN.build=function(X.nn,X.lin,X.add.basis, offset, type, init.q, widths,link,tau=tau)
 {
 
 
@@ -364,7 +344,7 @@ quant.NN.build=function(X.nn,X.lin,X.add.basis, offset, type, init.q, widths,fil
       }
     }else if(type=="CNN"){
       for(i in 1:n.layers){
-        nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(filter.dim[1],filter.dim[2]), padding='same',
+        nnBranchq <- nnBranchq  %>% layer_conv_2d(filters=nunits[i],activation = 'relu',kernel_size=c(3,3), padding='same',
                                                   input_shape =dim(X.nn)[-1], name = paste0('nn_q_cnn',i) )
       }
 
@@ -448,9 +428,9 @@ model <- keras_model(  inputs = input,   outputs = c(qBranchjoined),name=paste0(
 
 
 
-tilted.loss <- function( tau,S_lambda=NULL) {
+tilted.loss <- function( tau) {
 
-  if(is.null(S_lambda)){
+
   loss <- function( y_true, y_pred) {
   K <- backend()
 
@@ -462,24 +442,7 @@ tilted.loss <- function( tau,S_lambda=NULL) {
   error = y_true - y_pred
   return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds))
   }
-  }else{
-    loss <- function( y_true, y_pred) {
-      K <- backend()
-      
-      t.gam.weights=K$constant(t(model$get_layer("add_q")$get_weights()[[1]]))
-      gam.weights=K$constant(model$get_layer("add_q")$get_weights()[[1]])
-      S_lambda.tensor=K$constant(S_lambda)
-      
-      penalty = 0.5*K$dot(t.gam.weights,K$dot(S_lambda.tensor,gam.weights))
-      # Find inds of non-missing obs.  Remove missing obs, i.e., -1e10. This is achieved by adding an
-      # arbitrarily large (<1e10) value to y_true and then taking the sign ReLu
-      obsInds=K$sign(K$relu(y_true+9e9))
-      
-      error = y_true - y_pred
-      return(K$sum(K$maximum(tau*error, (tau-1)*error)*obsInds)/K$sum(obsInds)+penalty)
-    }
-    
-  }
+ 
   return(loss)
 }
 
