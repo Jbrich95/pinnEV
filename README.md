@@ -16,7 +16,7 @@ For the statistical distribution $F$, we have implemented:
 * Generalised Pareto distribution (GPD) - see Coles, S.G. (2001) [doi:10.1007/978-1-4471-3675-0](https://doi.org/10.1007/978-1-4471-3675-0);
 * Re-parameterised GPD (with offset scale) - see Richards, J., et al., (2023) [doi:10.1175/AIES-D-22-0095.1](https://doi.org/10.1175/AIES-D-22-0095.1);
 * Blended Generalised Extreme Value (bGEV) distribution - see Castro-Camilo, D., et al. (2022) [doi:10.1002/env.2742](https://doi.org/10.1002/env.2742);
-* bGEV point process (bGEV-PP) - see Richards, J. and Huser, R. (2024+) [arxiv:2208.07581](https://arxiv.org/abs/2208.07581);
+* bGEV point process (bGEV-PP) - see Richards, J. and Huser, R. (2022+) [arxiv:2208.07581](https://arxiv.org/abs/2208.07581);
 * Extended GPD (eGPD; with offset scale) - see Cisneros, D., et al., (2024) [doi:10.1016/j.spasta.2024.100811](https://doi.org/10.1016/j.spasta.2024.100811);
 * Bernoulli/logistic;
 * Log-normal;
